@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ReaPack index for DAW Battle Pass.
+
+  Add this repository in REAPER with Extensions > ReaPack > Import repositories,
+  pasting the raw URL of this file on the default branch:
+
+    https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/main/index.xml
+
+  That URL only resolves once this file is on the default branch.
+
+  Each <source> is pinned to a commit rather than a branch, so an installed
+  version is the exact set of files that was tested and cannot change
+  underneath anyone. Publishing a new version means adding a <version> block
+  with a fresh commit hash - never editing an existing one. Merge (don't
+  squash) the pull request that carries a release, so its commit is on main.
+
+  The six files are one package and install into one folder, because the
+  main script loads the other five from beside itself.
+
+  ReaPack keys an installed package by its NAME, so renaming the script is
+  not an upgrade. Rename sparingly.
+-->
+<index version="1" name="DAW Battle Pass">
+  <category name="Various">
+
+    <reapack name="DAW Battle Pass.lua" type="script" desc="DAW Battle Pass">
+      <version name="1.0" author="kallums" time="2026-10-08T12:00:00Z">
+        <changelog><![CDATA[First release. A battle pass for making music. Every fifteen minutes of active music-making unlocks a tier of this month's season pass, and every hour a big one; it pauses by itself when you're away, and your progress carries across every project. Everything you do earns XP, and every level gives a loot crate. Rewards run from Poor to Mythic and never run out: song titles, song themes, chord progressions, drum patterns and melodies (straight into your project as MIDI), sound design briefs, challenges, genre fusions, artist aliases, lyric openers, arrangements (as regions), song seeds, Diablo-style studio gear with bonuses and powers, titles and banners. Coins buy permission passes in the shop - a takeaway, a movie, a gaming session - plus daily deals. Daily check-ins with streaks, daily and weekly quests (some about your own plugins), and 28 achievement series. Needs ReaImGui.]]></changelog>
+        <source main="main" file="DAW Battle Pass.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/a80f562544b4610290dfaf763d8015834457b326/reascripts/DAW%20Battle%20Pass.lua</source>
+        <source file="bp_theory.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/a80f562544b4610290dfaf763d8015834457b326/reascripts/bp_theory.lua</source>
+        <source file="bp_loot.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/a80f562544b4610290dfaf763d8015834457b326/reascripts/bp_loot.lua</source>
+        <source file="bp_game.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/a80f562544b4610290dfaf763d8015834457b326/reascripts/bp_game.lua</source>
+        <source file="bp_fx.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/a80f562544b4610290dfaf763d8015834457b326/reascripts/bp_fx.lua</source>
+        <source file="bp_watch.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/a80f562544b4610290dfaf763d8015834457b326/reascripts/bp_watch.lua</source>
+      </version>
+    </reapack>
+
+  </category>
+</index>
