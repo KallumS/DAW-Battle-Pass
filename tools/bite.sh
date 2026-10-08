@@ -44,7 +44,7 @@ bite reascripts/bp_game.lua '  notice(ss, { kind = "crate", rarity = r, drops = 
   grantAll(st, ss, drops)' '  grantAll(st, ss, drops)
   notice(ss, { kind = "crate", rarity = r, drops = drops })' \
      test_ui.lua "a level-up jumps ahead of the crate that caused it"
-bite reascripts/bp_loot.lua '  if acc < -1 or acc > 1 then return L.T.ROOTS[L.T.rootFor(pc)].name end' '' \
-     test_loot.lua "double flats in chord names"
+bite reascripts/bp_loot.lua '      if not bestCost or cost < bestCost then best, bestCost = k, cost end' '      if not bestCost then best, bestCost = k, cost end' \
+     test_loot.lua "keys spelled without minding their accidentals (Ab Phrygian's Bbb)"
 
 exit $bad

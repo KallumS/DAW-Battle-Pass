@@ -45,30 +45,31 @@ G.XP = { minute = 4, edit = 1, track = 10, item = 3, fx = 6, discover = 20,
          note = 0.5, take = 15, marker = 3, idea = 25, wind = 30 }
 
 ------------------------------------------------------------------------------
--- The coin shop. Prices in coins; edit freely.
+-- The coin shop. Prices in coins; edit freely. A focused hour earns very
+-- roughly 400-600 coins, all told, so a takeaway is about five hours of music.
 --   kind "pass":  a permission slip, redeemed from Loot
 --   kind "token": a gameplay token
 --   kind "crate": a loot crate of a rarity (1 Poor ... 7 Mythic)
 ------------------------------------------------------------------------------
 
 G.SHOP = {
-  { id = "coffee",   kind = "pass",  name = "Coffee Run Pass",    price = 150,  icon = "coffee",
+  { id = "coffee",   kind = "pass",  name = "Coffee Run Pass",    price = 300,  icon = "coffee",
     desc = "Permission to go and get a fancy coffee." },
-  { id = "snack",    kind = "pass",  name = "Snack Pass",         price = 250,  icon = "cookie",
+  { id = "snack",    kind = "pass",  name = "Snack Pass",         price = 450,  icon = "cookie",
     desc = "Permission for a guilt-free snack break." },
-  { id = "youtube",  kind = "pass",  name = "Video Break Pass",   price = 350,  icon = "tv",
+  { id = "youtube",  kind = "pass",  name = "Video Break Pass",   price = 600,  icon = "tv",
     desc = "Thirty minutes of guilt-free videos." },
-  { id = "lie_in",   kind = "pass",  name = "Lie-In Pass",        price = 700,  icon = "moon",
+  { id = "lie_in",   kind = "pass",  name = "Lie-In Pass",        price = 1200,  icon = "moon",
     desc = "Permission to sleep in tomorrow. No alarms." },
-  { id = "movie",    kind = "pass",  name = "Movie Pass",         price = 900,  icon = "film",
+  { id = "movie",    kind = "pass",  name = "Movie Pass",         price = 1600,  icon = "film",
     desc = "Permission to watch a whole movie." },
-  { id = "gaming",   kind = "pass",  name = "Gaming Pass",        price = 1000, icon = "gamepad",
+  { id = "gaming",   kind = "pass",  name = "Gaming Pass",        price = 1800, icon = "gamepad",
     desc = "Permission for a two hour gaming session." },
-  { id = "takeaway", kind = "pass",  name = "Takeaway Pass",      price = 1200, icon = "pizza",
+  { id = "takeaway", kind = "pass",  name = "Takeaway Pass",      price = 2500, icon = "pizza",
     desc = "Permission to order a takeaway. You earned it." },
-  { id = "day_off",  kind = "pass",  name = "Day Off Pass",       price = 3000, icon = "calendar",
+  { id = "day_off",  kind = "pass",  name = "Day Off Pass",       price = 6000, icon = "calendar",
     desc = "A whole day off music, with zero guilt." },
-  { id = "plugin",   kind = "pass",  name = "New Plugin Pass",    price = 6000, icon = "plug",
+  { id = "plugin",   kind = "pass",  name = "New Plugin Pass",    price = 12000, icon = "plug",
     desc = "Permission to buy one new plugin or sample pack." },
   { id = "reroll",   kind = "token", name = "Quest Reroll",       price = 120,  icon = "dice",  token = "reroll",
     desc = "Swap a quest you don't fancy for a new one." },

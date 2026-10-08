@@ -325,7 +325,7 @@ local function has(list, text)
   return false
 end
 -- The n-th button called `label`; failing that, the n-th starting with it
--- ("1,200 coins", "Set tempo 97").
+-- ("2,500 coins", "Set tempo 97").
 local function buttonIndex(label, nth)
   for _, exact in ipairs({ true, false }) do
     local seen = 0
@@ -569,7 +569,7 @@ click("All")
 
 click("Shop")
 frames(2)
-local buyAt = buttonIndex("1,200 coins")
+local buyAt = buttonIndex("2,500 coins")
 ok(buyAt ~= nil, "the takeaway pass is in the shop")
 frame(buyAt)
 frame()
