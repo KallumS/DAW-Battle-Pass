@@ -13,6 +13,21 @@ Built in the same shape as its sister repos (Good Idea, Midi Catalogue,
 Starting Blocks, Midi Suggester, Midi Variator, ScaleView for REAPER). When in
 doubt, do what Midi Catalogue does.
 
+## Where the reasons are
+
+- **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** - the shape of the script
+  and every big decision on one page. Start here.
+- **[`docs/decisions/`](docs/decisions/README.md)** - one record per choice
+  someone could reasonably make the other way, referred to by number:
+  **(0006)** is `docs/decisions/0006-gear-never-shortens-the-clock.md`. Not
+  edited to stay true: a reversed decision keeps its text and gains a pointer.
+- **[`docs/sessions/`](docs/sessions/README.md)** - one log per working
+  session: the route, the mistakes, what looked broken and was not, what is
+  not done yet. Read the latest one's "Not done yet" before starting.
+
+Write to all three when something changes. A rule here without its reason
+gets undone.
+
 ## Shape of it
 
 | | |
@@ -25,8 +40,9 @@ doubt, do what Midi Catalogue does.
 | `reascripts/bp_watch.lua` | Everything that touches REAPER: activity signals, project scans, putting ideas into the project, files, autostart. |
 | `tools/demo.lua` | Every kind of reward at every rarity, printed. **Read it before and after changing a generator or word list.** |
 | `tools/bite.sh` | Breaks the code on purpose in a copy and checks a suite fails. |
-| `docs/decisions/` | Why things are the way they are, one file per decision. |
-| `docs/sessions/` | What happened in a session, written at the end of it. |
+| `docs/ARCHITECTURE.md`, `docs/decisions/`, `docs/sessions/` | See above. |
+| `docs/COLOUR.md` | Every colour, kept by hand. |
+| `docs/HANDOVER.md` | The prompt to start a fresh session with. Keep it current. |
 
 **`bp_theory`, `bp_loot`, `bp_game` and `bp_fx` never touch `reaper.` or
 `ImGui.`** They take plain tables and return plain tables. `bp_watch`
@@ -38,7 +54,9 @@ handed what they need (`L.init(T)`, `G.init(L)`, `W.init(G)`).
 - **The time is always passed in** ([0003](docs/decisions/0003-time-is-passed-in.md)).
   `G.tick(st, ss, tp, epoch, signals)`: `tp` is `time_precise()` (idle, dt),
   `epoch` is `os.time()` (days, weeks, seasons). A day starts at 4am
-  (`G.DAY_START_HOUR`). Tests run weeks in a second.
+  (`G.DAY_START_HOUR`); a season is a calendar month
+  ([0014](docs/decisions/0014-seasons-are-months-days-start-at-4am.md)).
+  Tests run weeks in a second.
 - **Active time, not wall time** ([0002](docs/decisions/0002-active-time-not-wall-time.md)).
   `W.signals` says whether anything happened: the project change count,
   transport, edit cursor, mouse (only while REAPER is in front, if
@@ -93,7 +111,7 @@ Legendary and Mythic. Names: Poor "Cracked X", Uncommon prefix or suffix, Rare
 both, Epic two words, Legendary "Name's Base", Mythic "Name, Epithet".
 `G.bonus(st, stat)` sums what's equipped; `G.hasPower(st, id)`.
 
-## Saving
+## Saving ([0011](docs/decisions/0011-one-save-file-read-in-an-empty-room.md))
 
 One file, `<resource>/Data/DAW Battle Pass/progress.lua`: the state as a Lua
 table literal (`G.serialize`, keys sorted, `_`-prefixed keys skipped). Read
@@ -114,7 +132,8 @@ before `Begin` and popped after `End`, outside the `visible` test. `End` and
 Pages draw on the window's draw list in screen coordinates and place real
 buttons with `SetCursorScreenPos`; `finish(x, y)` leaves a `Dummy` so the
 page child scrolls. The particle and toast overlay is on
-`GetForegroundDrawList`. Text on the draw list goes through `dtext`/`wrap`
+`GetForegroundDrawList`
+([0012](docs/decisions/0012-the-stage-replaces-the-page.md)). Text on the draw list goes through `dtext`/`wrap`
 with the four attached fonts (`FONT.body/bold/big/huge`), measured with
 `PushFont` + `CalcTextSize` scaled to the size drawn. A modal replaces the
 page child entirely, so nothing underneath can be clicked.
@@ -124,7 +143,16 @@ page child entirely, so nothing underneath can be clicked.
 sister repos. Closing the window stops the clock, which here costs progress.
 
 `sure(id, label)` is the two-step button for anything that spends or
-destroys: the first click turns it into a yellow "Sure?" for three seconds.
+destroys: the first click turns it into a yellow "Sure?" for three seconds
+([0015](docs/decisions/0015-sure-before-spending.md)).
+
+## Prices ([0013](docs/decisions/0013-prices-from-a-simulated-economy.md))
+
+`G.SHOP` at the top of `bp_game.lua`; the README tells the user where it is.
+They were set from a simulation: about 575 coins an active hour, so a
+takeaway (2,500) is about five hours of music. Change the size of any
+reward - coins, quests, crates, check-ins - and re-run a simulation (the
+2026-10-08 session log describes it) before trusting the prices.
 
 ## Colour
 
@@ -151,7 +179,7 @@ fix the mock from the page, never from the code.
 - `CreateNewMIDIItemInProj(track, t0, t1, false)`: seconds, not QN.
 - `set_action_options(1)`: running the action again ends the script.
 
-## Tests
+## Tests ([0016](docs/decisions/0016-mocks-from-the-docs-and-tests-that-bite.md))
 
 ```
 tools/test.sh      # all six suites
@@ -170,7 +198,15 @@ tools/bite.sh      # every line should say "bites"
 A fresh container has no Lua: `apt-get install -y lua5.4`
 (`tools/run_lua.py` runs the suites through lupa otherwise).
 
-## Releasing
+## Where it stands
+
+Version 1.0, written and tested in one session (2026-10-08), **never yet run
+inside REAPER**: everything is proven against mocks only. When the user
+first runs it, expect small fixes in the drawing - the draw list calls,
+fonts, the foreground draw list - and fix the mocks from the API docs when
+you do. The rest of what's not done is in the latest session log.
+
+## Releasing ([0017](docs/decisions/0017-released-through-reapack-pinned.md))
 
 `index.xml` is the ReaPack index. Each `<version>` pins every file to a
 commit hash, so a release is: commit the code, then add a new `<version>`
