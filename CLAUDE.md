@@ -42,6 +42,7 @@ gets undone.
 | `tools/bite.sh` | Breaks the code on purpose in a copy and checks a suite fails. |
 | `docs/ARCHITECTURE.md`, `docs/decisions/`, `docs/sessions/` | See above. |
 | `docs/COLOUR.md` | Every colour, kept by hand. |
+| `docs/HANDOVER.md` | The prompt to start a fresh session with. Keep it current. |
 
 **`bp_theory`, `bp_loot`, `bp_game` and `bp_fx` never touch `reaper.` or
 `ImGui.`** They take plain tables and return plain tables. `bp_watch`
