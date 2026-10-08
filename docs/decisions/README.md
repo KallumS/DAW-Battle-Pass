@@ -17,3 +17,12 @@ one that replaced it.
 | [0008](0008-nothing-earned-is-lost.md) | Nothing earned is lost |
 | [0009](0009-escape-closes-a-celebration.md) | Escape closes a celebration, not the window |
 | [0010](0010-plugin-quests-from-your-list-or-everything.md) | Plugin quests: your list, or everything installed |
+| [0011](0011-one-save-file-read-in-an-empty-room.md) | Progress is one file, read in an empty environment |
+| [0012](0012-the-stage-replaces-the-page.md) | The stage replaces the page; effects float above everything |
+| [0013](0013-prices-from-a-simulated-economy.md) | Prices come from a simulated economy |
+| [0014](0014-seasons-are-months-days-start-at-4am.md) | Seasons are calendar months; days start at 4am |
+| [0015](0015-sure-before-spending.md) | Anything that spends or destroys asks once more |
+| [0016](0016-mocks-from-the-docs-and-tests-that-bite.md) | Tested against mocks written from the documentation, and proven to bite |
+| [0017](0017-released-through-reapack-pinned.md) | Released through ReaPack, pinned to commits |
+
+[`../ARCHITECTURE.md`](../ARCHITECTURE.md) groups them by subject, on one page.
