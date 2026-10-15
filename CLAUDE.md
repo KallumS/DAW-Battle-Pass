@@ -161,6 +161,21 @@ see `docs/COLOUR.md`. Every button wears the dark ink. The yellow accent is
 still only for what is on: the chosen tab or filter, the clock while it is
 running, a claimable quest, an active XP Boost.
 
+**Apple's HIG Foundations** ([0018](docs/decisions/0018-apples-hig-foundations.md),
+[`docs/apple-hig-review.md`](docs/apple-hig-review.md)): **words are 7:1** on
+the ground - `DIM` is `#B0B6C0`, a rarity's name is drawn in `RT(r)` (its
+`text`, in `bp_loot`) and its fill in `RC(r)`, the pass's orange in words is
+`PASS_TEXT`; `test_ui` checks every opaque word on every page. **Reduce
+Motion** (`st.settings.reduceMotion`, the Stats page) sets `fx.calm` and
+`ui.calm`: `bp_fx` makes no particles, shake, flash, bumps or coin flights and
+floaters stay put; in the window every `F.ease` goes through `settle` (lands at
+its end), every time-driven `math.sin` through `wave` (still), and `D.rays`
+does not turn. A new animation must go through those too. **Toasts stay**
+until clicked (`ui.toastRects`, and the click goes no further) or Esc, at most
+`F.MAX_TOASTS`; they have no `life` any more. **Keyboard navigation** is on,
+its ring `#F2F4F7`. Text Size and 28-point controls were not done: every page
+is drawn at fixed coordinates.
+
 ## REAPER, from a script
 
 Every `reaper.` call is listed, with its documented signature, in
@@ -200,8 +215,9 @@ A fresh container has no Lua: `apt-get install -y lua5.4`
 
 ## Where it stands
 
-Version 1.0, written and tested in one session (2026-10-08), **never yet run
-inside REAPER**: everything is proven against mocks only. When the user
+Version 1.0, written and tested in one session (2026-10-08); 1.1 (2026-10-15)
+follows Apple's HIG Foundations as far as a game board allows (0018). **Never
+yet run inside REAPER**: everything is proven against mocks only. When the user
 first runs it, expect small fixes in the drawing - the draw list calls,
 fonts, the foreground draw list - and fix the mocks from the API docs when
 you do. The rest of what's not done is in the latest session log.

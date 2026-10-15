@@ -45,6 +45,22 @@ start you off. You can **dock** the window: right-click its title bar.
 You can also tick **Start the battle pass when REAPER starts** on the Stats
 page, so you never forget to run it.
 
+### Calmer, and the keyboard
+
+The window follows Apple's design guidelines for Mac apps where a game board
+can ([what that covers](docs/apple-hig-review.md)):
+
+- **Reduce Motion**, on the Stats page, turns off the sparks, confetti,
+  shaking, flashing and bouncing: rewards appear at their final size and
+  messages without sliding in.
+- **Messages stay** in the top corner until you click them or press **Esc**,
+  so nothing disappears before you have read it. Newer ones push the oldest
+  out after four.
+- **The keyboard alone works**: Tab or an arrow key shows a white ring round
+  a control, Tab and the arrows move it, Space or Return clicks.
+- Every word is easier to read against the dark background: names of
+  rarities are drawn in a lighter shade of their colour.
+
 ### What counts as "working"
 
 The clock runs while something is happening in REAPER: edits, the mouse

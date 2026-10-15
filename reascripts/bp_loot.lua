@@ -102,14 +102,17 @@ L.articles = articles
 
 L.POOR, L.COMMON, L.UNCOMMON, L.RARE, L.EPIC, L.LEGENDARY, L.MYTHIC = 1, 2, 3, 4, 5, 6, 7
 
+-- `col` fills cards, glows and icons; `text` letters a rarity's name. Each
+-- `text` is at least 7:1 on the window's ground, Apple's target for small
+-- text in a dark window (0018); the fills are left as they were.
 L.RARITY = {
-  { name = "Poor",      col = 0x8A919CFF, weight = 12,  coins = { 4, 9 },     xp = 15,  sell = 1,   mult = 0.6 },
-  { name = "Common",    col = 0xDDE1E7FF, weight = 40,  coins = { 10, 20 },   xp = 30,  sell = 3,   mult = 0.8 },
-  { name = "Uncommon",  col = 0x3FCF6EFF, weight = 26,  coins = { 20, 40 },   xp = 60,  sell = 8,   mult = 1.0 },
-  { name = "Rare",      col = 0x3D8EFFFF, weight = 14,  coins = { 40, 80 },   xp = 120, sell = 20,  mult = 1.15 },
-  { name = "Epic",      col = 0xA45CFFFF, weight = 5.5, coins = { 90, 150 },  xp = 250, sell = 50,  mult = 1.3 },
-  { name = "Legendary", col = 0xFF8A1CFF, weight = 2,   coins = { 200, 300 }, xp = 500, sell = 120, mult = 1.5 },
-  { name = "Mythic",    col = 0xFF3FA4FF, weight = 0.5, coins = { 500, 750 }, xp = 1000, sell = 300, mult = 1.75 },
+  { name = "Poor",      col = 0x8A919CFF, text = 0xB0B6C0FF, weight = 12,  coins = { 4, 9 },     xp = 15,  sell = 1,   mult = 0.6 },
+  { name = "Common",    col = 0xDDE1E7FF, text = 0xDDE1E7FF, weight = 40,  coins = { 10, 20 },   xp = 30,  sell = 3,   mult = 0.8 },
+  { name = "Uncommon",  col = 0x3FCF6EFF, text = 0x3FCF6EFF, weight = 26,  coins = { 20, 40 },   xp = 60,  sell = 8,   mult = 1.0 },
+  { name = "Rare",      col = 0x3D8EFFFF, text = 0x8FBBFFFF, weight = 14,  coins = { 40, 80 },   xp = 120, sell = 20,  mult = 1.15 },
+  { name = "Epic",      col = 0xA45CFFFF, text = 0xC9A6FFFF, weight = 5.5, coins = { 90, 150 },  xp = 250, sell = 50,  mult = 1.3 },
+  { name = "Legendary", col = 0xFF8A1CFF, text = 0xFFA45CFF, weight = 2,   coins = { 200, 300 }, xp = 500, sell = 120, mult = 1.5 },
+  { name = "Mythic",    col = 0xFF3FA4FF, text = 0xFF92C9FF, weight = 0.5, coins = { 500, 750 }, xp = 1000, sell = 300, mult = 1.75 },
 }
 
 -- Luck (magic find, in percent) makes each step up the ladder that much

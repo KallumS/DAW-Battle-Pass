@@ -24,5 +24,6 @@ one that replaced it.
 | [0015](0015-sure-before-spending.md) | Anything that spends or destroys asks once more |
 | [0016](0016-mocks-from-the-docs-and-tests-that-bite.md) | Tested against mocks written from the documentation, and proven to bite |
 | [0017](0017-released-through-reapack-pinned.md) | Released through ReaPack, pinned to commits |
+| [0018](0018-apples-hig-foundations.md) | Apple's HIG Foundations, as far as a game board allows: 7:1 words, Reduce Motion, toasts that stay, the keyboard |
 
 [`../ARCHITECTURE.md`](../ARCHITECTURE.md) groups them by subject, on one page.

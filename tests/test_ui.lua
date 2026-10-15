@@ -28,6 +28,7 @@ local function resetFrame()
   g.idDepth, g.colDepth, g.colStack, g.fontDepth, g.disabled = 0, 0, {}, 0, 0
   g.windowDepth, g.childDepth = 0, 0
   g.buttons, g.ink, g.texts, g.tooltips, g.headings = {}, {}, {}, {}, {}
+  g.textCols, g.circles = {}, 0
   g.cx, g.cy, g.lastX, g.lastY, g.lastW, g.lastH = 0, 0, 0, 0, 0, 0
 end
 resetFrame()
@@ -38,8 +39,9 @@ local consts = { "Col_Text", "Col_TextDisabled", "Col_WindowBg", "Col_ChildBg", 
   "Col_TitleBgCollapsed", "Col_Button", "Col_ButtonHovered", "Col_ButtonActive", "Col_CheckMark",
   "Col_SliderGrab", "Col_SliderGrabActive", "Col_Separator", "Col_ScrollbarBg", "Col_ScrollbarGrab",
   "Col_ScrollbarGrabHovered", "Col_ScrollbarGrabActive", "Cond_FirstUseEver", "Key_Escape", "Key_Enter",
-  "FontFlags_Bold" }
+  "FontFlags_Bold", "Col_NavHighlight" }
 for i, k in ipairs(consts) do ImGui[k] = i end
+ImGui.ConfigFlags_NavEnableKeyboard = 1   -- a bit, as in ReaImGui
 
 local function num(v, what)
   if type(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then
@@ -62,7 +64,10 @@ local function item(w, h)
   g.cx = g.lineX
 end
 
-function ImGui.CreateContext(name) return { name = name } end
+-- ImGui_Context ctx = CreateContext(string label, optional integer config_flags)
+function ImGui.CreateContext(name, flags) g.configFlags = flags; return { name = name } end
+-- bool IsMouseClicked(ctx, integer button, optional bool repeat)
+function ImGui.IsMouseClicked(_, b) num(b, "mouse button"); return g.mouseClicked == true end
 function ImGui.CreateFont(family, size, flags)
   if type(family) ~= "string" then error("CreateFont needs a family") end
   num(size, "font size")
@@ -139,6 +144,7 @@ function ImGui.PushStyleColor(_, idx, col)
   if col % 256 == 0 then error("style colour must be opaque") end
   g.colStack[#g.colStack + 1] = { idx = idx, col = col }
   g.colDepth = g.colDepth + 1
+  if idx == ImGui.Col_NavHighlight then g.navRing = col end
 end
 function ImGui.PopStyleColor(_, n)
   for _ = 1, (n or 1) do g.colStack[#g.colStack] = nil end
@@ -170,7 +176,7 @@ end
 function ImGui.Checkbox(_, label, v)
   if type(v) ~= "boolean" then error("Checkbox value is a " .. type(v)) end
   item(100, 20)
-  if g.toggle then return true, not v end
+  if g.toggle or g.toggleOnly == label then return true, not v end
   return false, v
 end
 function ImGui.SliderInt(_, label, v, lo, hi)
@@ -239,7 +245,10 @@ end)
 drawCall("DrawList_AddRectFilledMultiColor", 4, nil, function(a) for i = 5, 8 do colour(a[i], "corner colour") end end)
 drawCall("DrawList_AddLine", 4, 5)
 drawCall("DrawList_AddCircle", 3, 4, function(a) if a[3] < 0 then error("negative radius") end end)
-drawCall("DrawList_AddCircleFilled", 3, 4, function(a) if a[3] < 0 then error("negative radius") end end)
+drawCall("DrawList_AddCircleFilled", 3, 4, function(a)
+  if a[3] < 0 then error("negative radius") end
+  g.circles = g.circles + 1
+end)
 drawCall("DrawList_AddTriangleFilled", 6, 7)
 drawCall("DrawList_AddQuadFilled", 8, 9)
 drawCall("DrawList_PathClear", 0)
@@ -255,6 +264,7 @@ ImGui.DrawList_AddTextEx = function(dl, font, size, x, y, col, text)
   if size <= 0 then error("text size " .. size) end
   if type(text) ~= "string" then error("AddTextEx text is a " .. type(text)) end
   g.texts[#g.texts + 1] = text
+  g.textCols[#g.texts] = col
   g.draws = g.draws + 1
 end
 setmetatable(ImGui, { __index = function(_, k)
@@ -596,6 +606,35 @@ ok(buttonIndex("Equip") ~= nil, "a chosen item can be equipped")
 click("Equip")
 frames(3)
 
+-- A toast stays until it is dismissed (decision 0018): Apple asks for nothing
+-- that goes away on a timer.
+-- "Equipped" is the Gear page's heading too; the toast is the second.
+local function equippedShown()
+  local n = 0
+  for _, t in ipairs(g.texts) do if t == "Equipped" then n = n + 1 end end
+  return n
+end
+eq(equippedShown(), 2, "equipping says so")
+frames(600, 0.1)
+eq(equippedShown(), 2, "and the toast is still there a minute later")
+-- The toast's place: the window's top right, 120 down (the mock's window is
+-- 920 wide at 0, 0).
+g.mouse, g.mouseClicked = { 700, 140 }, true
+frame()
+g.mouseClicked = false
+g.mouse = { 100, 100 }
+frame()
+eq(equippedShown(), 1, "a click on it takes it away")
+frame(stashAt)
+frame()
+click("Equip")
+frames(3)
+eq(equippedShown(), 2, "equipping again says so again")
+g.keys[ImGui.Key_Escape] = true
+frame()
+frame()
+eq(equippedShown(), 1, "and Esc takes it away too")
+
 -- Every button again, in the rich state.
 for _, tab in ipairs(TAB_NAMES) do
   click(tab)
@@ -666,6 +705,78 @@ frame()
 closeModals()
 click("Pass")
 ok(has(g.texts, "Tier 1 / 100"), "a damaged save falls back to the backup")
+
+------------------------------------------------------------------------------
+-- Apple's Human Interface Guidelines (decision 0018)
+------------------------------------------------------------------------------
+
+local function startOver()
+  fresh()
+  welcomed()
+end
+
+local function luminance(col)
+  local function ch(v)
+    v = v / 255
+    return v <= 0.03928 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4
+  end
+  return 0.2126 * ch(math.floor(col / 16777216) % 256) + 0.7152 * ch(math.floor(col / 65536) % 256)
+         + 0.0722 * ch(math.floor(col / 256) % 256)
+end
+local function contrast(a, b)
+  local la, lb = luminance(a), luminance(b)
+  return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05)
+end
+
+do
+  startOver()
+  ok(g.configFlags and g.configFlags & ImGui.ConfigFlags_NavEnableKeyboard ~= 0,
+     "the keyboard alone can move through the window: keyboard navigation is on")
+  ok(g.navRing and g.navRing ~= 0xFFF200FF and contrast(g.navRing, 0x23272EFF) >= 3,
+     "the focus ring has its own colour, not the accent, 3:1 on the ground")
+
+  -- Every opaque word on every page is 7:1 on the ground (INK is on buttons).
+  local worst, which = 99, nil
+  for _, tab in ipairs(TAB_NAMES) do
+    click(tab)
+    frames(2)
+    for i, text in ipairs(g.texts) do
+      local col = g.textCols[i]
+      if col and col % 256 == 255 and col ~= INK then
+        local c = contrast(col, 0x23272EFF)
+        if c < worst then worst, which = c, ("%s on %s (%08X)"):format(text, tab, col) end
+      end
+    end
+  end
+  ok(worst >= 7, ("every word is 7:1 on the ground (lowest %.2f: %s)"):format(worst, tostring(which)))
+end
+
+-- Reduce Motion: opening the same crate makes no sparks.
+local function crateCircles(calm)
+  startOver()
+  if calm then
+    click("Stats")
+    g.toggleOnly = "Reduce Motion"
+    frame()
+    g.toggleOnly = nil
+    frame()
+  end
+  click("Loot")
+  frame(buttonIndex("Open", 3))
+  frames(2)
+  frame(buttonIndex("##crate"))
+  local most = 0
+  for _ = 1, 35 do frame(); most = math.max(most, g.circles) end
+  return most
+end
+do
+  local moving, still = crateCircles(false), crateCircles(true)
+  ok(moving > 60, "a crate bursts in sparks: " .. moving .. " circles at most in a frame")
+  ok(still < 30, "with Reduce Motion, none: " .. still)
+  atexitFn()
+  local saved = io.open(P.resource .. "/Data/DAW Battle Pass/progress.lua"):read("a")
+  ok(saved:find("reduceMotion=true", 1, true) ~= nil, "Reduce Motion is saved")
+end
 
 -- Closing the window stops the script.
 g.closeWindow = true

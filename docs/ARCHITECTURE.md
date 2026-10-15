@@ -96,6 +96,7 @@ Each frame, the window:
 | [0012](decisions/0012-the-stage-replaces-the-page.md) | A reward replaces the page while it plays (nothing underneath can be clicked); particles and toasts float on the foreground draw list. |
 | [0009](decisions/0009-escape-closes-a-celebration.md) | Escape skips a celebration and never closes the window - closing it stops the clock. |
 | [0015](decisions/0015-sure-before-spending.md) | Anything that spends or destroys turns into a yellow "Sure?" for three seconds first. |
+| [0018](decisions/0018-apples-hig-foundations.md) | Apple's HIG Foundations, as far as a game board allows: words at 7:1 (a rarity's `text` beside its `col`), a Reduce Motion setting, toasts that stay until clicked or Esc, keyboard navigation. Text Size and 28-point controls would need every page laid out on a scale, and were left. |
 
 Colour has its own page, [`COLOUR.md`](COLOUR.md): the house scheme
 unchanged, plus the rarity ladder, the XP blue, the pass orange and the coin
