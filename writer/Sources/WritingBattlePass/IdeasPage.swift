@@ -12,7 +12,7 @@ struct IdeasPage: View {
       f == "all" || (f == "fav" && v.fav == true) || (f == "new" && v.used != true) || v.kind == f
     }
     VStack(alignment: .leading, spacing: 14) {
-      ScrollView(.horizontal, showsIndicators: false) {
+      HScroll(snapshot: model.snapshot) {
         HStack(spacing: 6) {
           chip("all", "All \(st.vault.count)")
           chip("new", "Not used yet")

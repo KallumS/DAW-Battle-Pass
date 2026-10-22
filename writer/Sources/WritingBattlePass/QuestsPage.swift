@@ -48,7 +48,6 @@ struct QuestCard: View {
     let col = Theme.rarity(q.rarity)
     let ready = q.done && !q.claimed
     HStack(spacing: 14) {
-      RoundedRectangle(cornerRadius: 2).fill(col).frame(width: 4)
       VStack(alignment: .leading, spacing: 6) {
         Text(q.text).font(Theme.ui(14.5, .semibold)).foregroundStyle(q.claimed ? Theme.dim : Theme.text)
         HStack(spacing: 10) {
@@ -76,8 +75,9 @@ struct QuestCard: View {
           .help("Swap this quest for a different one")
       }
     }
-    .padding(12)
+    .padding(.vertical, 12).padding(.leading, 20).padding(.trailing, 12)
     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.sunken))
+    .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 2).fill(col).frame(width: 4).padding(.vertical, 12).padding(.leading, 8) }
     .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(ready ? Theme.accent : Theme.rule.opacity(0.6), lineWidth: ready ? 2 : 1))
   }
 }

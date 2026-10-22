@@ -19,7 +19,7 @@ struct ContentView: View {
               .transition(.opacity.combined(with: .scale(scale: 0.97)))
           } else if model.snapshot {
             // The screenshot renderer can't draw inside a ScrollView.
-            VStack { page.padding(20).frame(maxWidth: .infinity, alignment: .leading); Spacer(minLength: 0) }
+            page.padding(20).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).clipped()
           } else {
             ScrollView {
               page.padding(20).frame(maxWidth: .infinity, alignment: .leading)

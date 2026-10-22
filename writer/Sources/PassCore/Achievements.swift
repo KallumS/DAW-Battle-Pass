@@ -90,7 +90,8 @@ public enum Achievements {
   }
 
   public static func text(_ a: Achievement, _ tier: Int) -> String {
-    a.fmt.replacingOccurrences(of: "%@", with: fmtGoal(a.goals[max(0, min(a.goals.count - 1, tier - 1))]))
+    let goal = a.goals[max(0, min(a.goals.count - 1, tier - 1))]
+    return agree(a.fmt.replacingOccurrences(of: "%@", with: fmtGoal(goal)), goal)
   }
 }
 

@@ -33,6 +33,8 @@ enum Snapshots {
     e.st.inv.passes = ["lipstick": 1, "coffee": 2]
     e.st.inv.tokens = ["reroll": 2, "freeze": 1, "boost": 1]
     e.st.checkin.streak = 4; e.st.checkin.best = 9; e.st.checkin.total = 21
+    e.st.checkin.last = Dates.dayKey(epoch - 86400)
+    e.st.stats.redeemed = 2
     e.st.stats.words = 48210; e.st.stats.active = 3600 * 31; e.st.stats.letters = 260000
     e.st.stats.tiers = 120; e.st.stats.crates = 33
     let today = Dates.dayKey(epoch)

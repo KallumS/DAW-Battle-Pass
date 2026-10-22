@@ -10,7 +10,8 @@ extension Engine {
     let steps = (spec.1 - spec.0) / spec.2
     let target = spec.0 + Int(d.next() * Double(steps + 1)) * spec.2
     let diff = steps > 0 ? Double(target - spec.0) / Double(spec.1 - spec.0) : 0.5
-    var q = Quest(kind: tpl.kind, text: tpl.text.replacingOccurrences(of: "%d", with: String(target)),
+    let text = agree(tpl.text.replacingOccurrences(of: "%d", with: String(target)), Double(target))
+    var q = Quest(kind: tpl.kind, text: text,
                   target: Double(target) * tpl.unit, scope: scope, unit: tpl.unit)
     if scope == "daily" {
       q.coins = roundHalf(40 + diff * 50)

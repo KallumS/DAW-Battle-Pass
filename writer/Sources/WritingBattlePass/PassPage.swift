@@ -47,7 +47,7 @@ struct PassPage: View {
         VStack(alignment: .leading, spacing: 10) {
           SectionTitle(text: "The track", right: "Next: \(Fmt.clock(model.secsToTier)) of writing")
           ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: true) {
+            HScroll(snapshot: model.snapshot) {
               HStack(spacing: 8) {
                 ForEach(max(1, st.pass.tier - 4)...(st.pass.tier + 24), id: \.self) { t in
                   TierCell(tier: t, season: st.pass.season, level: st.level, have: st.pass.tier)

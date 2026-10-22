@@ -106,6 +106,19 @@ public func sentences(_ parts: [String]) -> String {
   return out
 }
 
+/// "Write for 1 hours" as "Write for 1 hour": the plurals the quests and
+/// trophies use, made singular when the number is one.
+public func agree(_ s: String, _ n: Double) -> String {
+  guard n == 1 else { return s }
+  var out = s
+  for (many, one) in [(" hours", " hour"), (" quests", " quest"), (" passes", " pass"), (" prompts", " prompt"),
+                      (" tiers", " tier"), (" gift boxes", " gift box"), (" days", " day"), (" letters", " letter"),
+                      (" words", " word"), (" things", " thing"), (" coins", " coin"), (" minutes", " minute")] {
+    if let r = out.range(of: many) { out.replaceSubrange(r, with: one) }
+  }
+  return out
+}
+
 /// The first letter in capitals.
 public func cap(_ s: String) -> String { s.prefix(1).uppercased() + s.dropFirst() }
 

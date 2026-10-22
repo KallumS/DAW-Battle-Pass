@@ -18,6 +18,11 @@ final class LootTests: XCTestCase {
     XCTAssertEqual(articles("A ode"), "An ode")
     XCTAssertEqual(articles("Margot Vale, a idea"), "Margot Vale, an idea")
     XCTAssertEqual(plural("Story"), "Stories")
+    XCTAssertEqual(agree("Open 1 gift boxes", 1), "Open 1 gift box")
+    XCTAssertEqual(agree("Write for 1 hours in one day", 1), "Write for 1 hour in one day")
+    XCTAssertEqual(agree("Open 2 gift boxes", 2), "Open 2 gift boxes")
+    XCTAssertEqual(sentences(["Last line: \u{201C}The end.\u{201D}", "Genre: Western"]), "Last line: \u{201C}The end.\u{201D} Genre: Western")
+    XCTAssertEqual(sentences(["Nobody may say \u{201C}no\u{201D}", "Then"]), "Nobody may say \u{201C}no\u{201D}. Then")
   }
 
   func testLuck() {

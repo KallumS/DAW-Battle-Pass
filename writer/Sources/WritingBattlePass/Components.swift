@@ -79,6 +79,20 @@ struct SureButton: View {
   }
 }
 
+/// A row that scrolls sideways - or, in snapshots, just a clipped row,
+/// because the renderer can't see inside a ScrollView.
+struct HScroll<Content: View>: View {
+  let snapshot: Bool
+  @ViewBuilder let content: Content
+  var body: some View {
+    if snapshot {
+      HStack(spacing: 0) { content; Spacer(minLength: 0) }.clipped()
+    } else {
+      ScrollView(.horizontal, showsIndicators: true) { content }
+    }
+  }
+}
+
 /// A sunken panel.
 struct Panel<Content: View>: View {
   var padding: CGFloat = 14

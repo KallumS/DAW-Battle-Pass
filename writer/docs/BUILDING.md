@@ -14,6 +14,12 @@ compiler**: push, then read the run.
 | `tools/snapshots.sh` | Runs the built app with `--snapshots`: every page and celebration of a made-up save drawn to `build/snapshots/*.png`. |
 | `Resources/` | `Info.plist` and the 1024px icon (drawn with PIL; regenerate with the script in the 2026-10-22 session log). |
 
+| `tools/print_snapshots.sh` | Prints each snapshot into the CI log as a small base64 JPEG between `SNAP-BEGIN`/`SNAP-END` lines - Claude's containers can read job logs but not download artifacts. |
+
+In snapshot mode pages are drawn without their ScrollView (the renderer
+can't see into one), and text fields draw as a yellow "no" box: both are
+the renderer's limits, not the app's.
+
 CI uploads two artifacts: **Writing-Battle-Pass** (the zip to hand over) and
 **snapshots** (the PNGs - look at them after any change to the window).
 Pushing a tag `writer-v1.0` builds a release with the zip attached.
