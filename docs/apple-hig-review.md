@@ -73,3 +73,38 @@ navigation and its ring; every opaque word on every page 7:1; a crate opened
 with Reduce Motion draws no sparks (60+ circles a frame without it, under 30
 with); the setting saved; a toast still there a minute later, gone on a click
 and on Esc. Each rule was broken on purpose and the suite failed.
+
+## Final sweep (22 October 2026, version 1.2)
+
+One verdict per checklist item that applies to this window (from the
+Accessibility, Color, Dark Mode, Layout, Motion, Typography and Writing pages).
+
+| Item | Verdict |
+| --- | --- |
+| Text can be made at least twice as big (Accessibility, Typography) | Fixed now: Text Size 100-200%, View menu and Cmd+= / Cmd+- / Cmd+0, saved; the whole board scales |
+| Controls 28 points tall, 12 apart (Layout) | Fixed now (`pushSize`) |
+| Buttons never narrower than their label | Fixed now (`fit` in `pick`) |
+| Nothing cut off or past the window's edge at 200% (Layout) | Fixed now: rows wrap, pages lay out to their width or scroll; tested at 100% and 200%, roomy and smallest |
+| Truncated text available in full | Fixed now: a cut-short card or toast shows whole in a tooltip |
+| Minimum window size | Fixed now: 420 by 360 points, grown with the text |
+| Popups and menus lighter than the window (Dark Mode) | Fixed now: `#2A2F37`, edge `#3A404A`; toasts too |
+| Menu key labels 7:1 | Fixed now: `#BFC5CE` |
+| Non-text contrast 3:1 (scrollbar, frames, marks) | Fixed now: grab `#6D7581`, boxes and sliders edged, `MARK` for meaning without words |
+| Every grey blue-shifted; no ImGui defaults (menu bar, headers, resize grip) | Fixed now, checked by `test_ui` |
+| Colour never alone for "chosen" | Fixed now: an ink bar under a chosen button |
+| No time limits | Fixed now: "Click Again to ..." no longer gives up after three seconds |
+| Esc lets go of focus or a menu first | Fixed now; Esc still never closes the window (0009) |
+| Window title names what is shown | Fixed now: "DAW Battle Pass — Quests", or the celebration |
+| Ask before something is spent or thrown away | Met: `sure()` (0015) |
+| Reduce Motion; no flashes over three a second | Met in 1.1 |
+| Keyboard navigation, its own ring | Met in 1.1 |
+| Words 7:1 | Met in 1.1; checked again at every size |
+| Writing: title-style buttons | Fixed now ("Check In", "Let's Go", "Not Now") |
+| Messages at the top until dismissed | User's decision (0018): news is toasts at the top, which stay; settings messages sit by their setting |
+| VoiceOver, Dynamic Type, Increase Contrast, system Reduce Motion | Not possible from a ReaImGui script |
+| Hit targets for drawn things (crates, tiers) | Met: invisible buttons over them, their drawn size, reachable by Tab |
+
+Checked by `tests/test_ui.lua` (the family's `tests/hig_mock.lua`, the title,
+the smallest window, overflow at both sizes, Esc, no timer, the theme) and
+`tools/bite.sh`. **Unverified in REAPER**: how the scaled board looks at
+125-200%, the fonts made per size, the menu bar, and Cmd+= reaching the window.

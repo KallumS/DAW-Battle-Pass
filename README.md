@@ -60,6 +60,14 @@ can ([what that covers](docs/apple-hig-review.md)):
   a control, Tab and the arrows move it, Space or Return clicks.
 - Every word is easier to read against the dark background: names of
   rarities are drawn in a lighter shade of their colour.
+- **View → Text Size** makes everything bigger, up to 200% - the pages, the
+  celebrations and the messages grow together, and a page scrolls rather
+  than squashing. **Cmd+=** and **Cmd+-** (Ctrl on Windows) step it,
+  **Cmd+0** goes back to 100%, and it is remembered.
+- **Buying, salvaging, redeeming and deleting ask once more**: the button
+  turns into "Click Again to Buy" (or Salvage, Redeem, Delete) and waits as
+  long as you like; **Esc** or another page cancels it.
+- The window's title says which page you are on.
 
 ### What counts as "working"
 

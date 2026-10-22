@@ -37,3 +37,36 @@ particles, shaking, flashing and toasts. So it took what fits it:
 Every rule was broken on purpose and a test failed, except "Reduce Motion
 clamped to true/false" in `clampState`: `fill` already replaces a value of the
 wrong type, so that line was dead and was removed.
+
+## The final sweep (22 October 2026, version 1.2)
+
+The two things "Not taken" above are taken now, with the rest of the family's
+final sweep:
+
+- **Text Size, 100-200%**, from a View menu and Cmd+= / Cmd+- / Cmd+0, saved.
+  The board is laid out in points and drawn at the text size (`S`): one turn
+  of every coordinate, in `D.*`, `dtext`, `at`, `hit` and `mouseIn`, so the
+  pages needed no new layouts, only to lay out to `ui.pageW` and wrap their
+  rows of buttons. A page too wide for the window scrolls. Fonts are made for
+  each size, so 200% stays sharp.
+- **Controls 28 points tall and 12 apart**, never narrower than their label;
+  a chosen button carries an ink bar under its label.
+- **Menus and tooltips a step lighter** (`#2A2F37`, edge `#3A404A`), menu
+  keys `#BFC5CE` (7:1 on the menu), the scrollbar's grab and the resize grip
+  in house greys at 3:1, every theme colour R < G < B; the name box, slider
+  and ticks wear a 3:1 edge; toasts sit on the popup grey too.
+- **No timers**: "Sure?" became "Click Again to Buy" (Salvage, Redeem,
+  Delete) and waits until clicked again, Esc or another page - 0015's two
+  steps without its three seconds.
+- **Esc** lets go of the keyboard's place or a menu before it touches the
+  stage, an armed button or the toasts. It still never closes the window
+  (0009).
+- **A minimum window** of 420 by 360 points, grown with the text; **the
+  title** names the page or the celebration; **cut-short text** (a card, a
+  toast) shows whole in a tooltip; button labels take title style.
+
+Not taken: messages at the top (as above - news is already toasts at the
+top); VoiceOver, Dynamic Type and Increase Contrast (unreachable). Every new
+rule was broken on purpose with `tools/bite.sh` and the suite failed; the
+first Esc test did not bite (it used the welcome, which Esc never closes) and
+was moved to an armed button, where it does.
