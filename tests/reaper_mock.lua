@@ -248,6 +248,8 @@ local api = {
   RefreshToolbar2 = function(section, id) end,
   set_action_options = function(flags) P.actionOptions = flags end,
   MB = function(msg, title, kind) P.mb = msg; return 1 end,
+  -- string GetOS(): "Win32", "Win64", "OSX32", "OSX64", "macOS-arm64", or "Other"
+  GetOS = function() return P.os or "Other" end,
 }
 
 function P.install()

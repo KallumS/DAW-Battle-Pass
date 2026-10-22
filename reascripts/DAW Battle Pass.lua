@@ -22,7 +22,7 @@
  *                 js_ReaScriptAPI (optional) makes idle detection sharper.
  * Author:         Kallum Shah
  * Links:          https://github.com/KallumS/DAW-Battle-Pass
- * Version:        1.1
+ * Version:        1.2
  * Provides:
  *   bp_theory.lua
  *   bp_loot.lua
@@ -68,11 +68,18 @@ local W     = dofile(HERE .. "bp_watch.lua").init(G)
 
 local THEME = {
   { "Col_Text",              0xDDE1E7FF },
-  { "Col_TextDisabled",      0x8A919CFF },
+  -- Menu keys (Cmd+=) are drawn in this colour: 7:1 on a menu (#2A2F37).
+  { "Col_TextDisabled",      0xBFC5CEFF },
   { "Col_WindowBg",          0x23272EFF },
   { "Col_ChildBg",           0x23272EFF },
-  { "Col_PopupBg",           0x1B1F25FF },
-  { "Col_Border",            0x14171CFF },
+  -- Popups, menus and tooltips sit a step lighter than the window, as
+  -- Apple's Dark Mode asks of anything in front, with a rule round them.
+  { "Col_PopupBg",           0x2A2F37FF },
+  { "Col_Border",            0x3A404AFF },
+  { "Col_MenuBarBg",         0x1A1D23FF },
+  { "Col_Header",            0x3A404AFF },
+  { "Col_HeaderHovered",     0x3A404AFF },
+  { "Col_HeaderActive",      0x585F6BFF },
   { "Col_FrameBg",           0x1A1D23FF },
   { "Col_FrameBgHovered",    0x22262DFF },
   { "Col_FrameBgActive",     0x2A2F37FF },
@@ -87,9 +94,14 @@ local THEME = {
   { "Col_SliderGrabActive",  0xFFF200FF },
   { "Col_Separator",         0x3A404AFF },
   { "Col_ScrollbarBg",       0x1A1D23FF },
-  { "Col_ScrollbarGrab",     0x585F6BFF },
-  { "Col_ScrollbarGrabHovered", 0x6D7581FF },
+  -- The scrollbar's grab is 3:1 on its track (#585F6B was 2.6:1).
+  { "Col_ScrollbarGrab",     0x6D7581FF },
+  { "Col_ScrollbarGrabHovered", 0x8A919CFF },
   { "Col_ScrollbarGrabActive",  0xA9AFBAFF },
+  -- The corner to drag the window bigger: house greys, not ImGui's blue.
+  { "Col_ResizeGrip",        0x6D7581FF },
+  { "Col_ResizeGripHovered", 0x8A919CFF },
+  { "Col_ResizeGripActive",  0xA9AFBAFF },
   -- The keyboard's focus ring: near-white, because yellow means "on" and a
   -- focused control need not be.
   { "Col_NavHighlight",      0xF2F4F7FF },
@@ -115,6 +127,14 @@ local PASS_COL = 0xFF8A1CFF   -- the season track: Legendary's orange
 local PASS_TEXT = 0xFFA45CFF  -- the same orange, light enough for words (7.6:1)
 local COIN     = 0xFFC83DFF
 local COIN_DK  = 0xB9862AFF
+-- In front of the window (toasts, like popups): a step lighter, and secondary
+-- words a shade lighter to stay 7:1 on it (#B0B6C0 would be 6.6:1).
+local POPUP     = 0x2A2F37FF
+local POPUP_DIM = 0xBAC0C9FF
+-- Things that carry meaning without words - the paused clock, a pip not yet
+-- reached, the border of a box to type in - are 3:1 on what they sit on.
+-- The ramp's #6D7581 is 3.6:1 on the panels; #3A404A (RULE) was 1.6:1.
+local MARK     = 0x6D7581FF
 
 local function shade(col, amount)
   local a = col % 256
@@ -137,6 +157,7 @@ local function RT(r) return L.RARITY[r].text end
 ------------------------------------------------------------------------------
 
 local ctx, FONT
+local FONTS = {}   -- a set of fonts for each text size, made once in main()
 local st, ss, watcher, fx
 local plugins, pluginSource = {}, ""
 local ui = {
@@ -147,6 +168,42 @@ local ui = {
   nextSlow = 0, nextSave = 0, saveSoon = nil, lastMouse = { 0, 0 }, own = false,
   tp = 0, epoch = 0, dt = 0, status = "",
 }
+
+------------------------------------------------------------------------------
+-- Text Size and one scale for everything (0018, the final sweep)
+--
+-- Apple asks that text can be made at least twice as big, and 13 points is
+-- the Mac's default. Every page, the header, the stage and the toasts are
+-- laid out in points at 100% - "logical" coordinates - and drawn at S times
+-- that size, so the whole board grows together and nothing collides: the
+-- page scrolls instead.
+--
+-- A logical point (x, y) is drawn at the screen point O + (x - O) * S, where
+-- O is the screen point the current page, header or stage starts at; so a
+-- page measures from area()'s x, y exactly as it did, and only its sizes
+-- grow. D.*, dtext, at(), hit() and mouseIn() do the turning; nothing else
+-- should call a DrawList function or SetCursorScreenPos with a logical
+-- number.
+------------------------------------------------------------------------------
+
+local TEXT_SIZES = { 100, 125, 150, 200 }
+local BASE_TEXT = 13
+local S = 1
+local OX, OY = 0, 0
+local function px(n) return math.floor(n * S + 0.5) end
+local function X(x) return OX + (x - OX) * S end
+local function Y(y) return OY + (y - OY) * S end
+local function LX(sx) return OX + (sx - OX) / S end
+local function LY(sy) return OY + (sy - OY) / S end
+local function origin(x, y) OX, OY = x, y end
+
+local function setTextSize(i)
+  i = math.max(1, math.min(#TEXT_SIZES, math.floor(tonumber(i) or 1)))
+  if st then st.settings.textSize = i end
+  S = TEXT_SIZES[i] / 100
+  if FONTS[i] then FONT = FONTS[i] end
+  ui.wraps = {}
+end
 
 -- Reduce Motion (0018): with it on, every animation is at its end - nothing
 -- scales past its size, pulses, bobs, spins or slides - and bp_fx makes no
@@ -202,8 +259,46 @@ local function pushTheme()
 end
 local function popTheme() ImGui.PopStyleColor(ctx, #THEME) end
 
+-- The text size and Apple's Mac control: 28 points tall at 100% (a 13-point
+-- line and 7.5 above and below), 12 points between controls. Pushed before
+-- Begin and popped after End, like the theme.
+local SIZE_VARS = 3
+local function pushSize()
+  ImGui.PushFont(ctx, FONT.ui.f)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_FramePadding, px(8), 7.5 * S)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemSpacing, px(12), px(12))
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_ItemInnerSpacing, px(8), px(6))
+end
+local function popSize()
+  ImGui.PopStyleVar(ctx, SIZE_VARS)
+  ImGui.PopFont(ctx)
+end
+
+-- Logical places for ImGui's own widgets.
+local function at(x, y) ImGui.SetCursorScreenPos(ctx, X(x), Y(y)) end
+local function here()
+  local sx, sy = ImGui.GetCursorScreenPos(ctx)
+  return LX(sx), LY(sy)
+end
+
+-- A button's width on screen: the width asked for (in points), grown with
+-- the text size, and never narrower than its label, so nothing is cut short
+-- at 200%. btnW() is the same in points, for laying a row out.
+local function fit(label, width)
+  local text = label:gsub("##.*$", "")
+  return math.max(px(width or 0), select(1, ImGui.CalcTextSize(ctx, text)) + px(16))
+end
+local function btnW(label, width) return fit(label, width) / S end
+
+-- Is the item just drawn the one the keyboard is on? (After a click the
+-- ring is hidden, and so is this: only Tab and the arrows show it.)
+local function keyFocused()
+  return ImGui.IsItemFocused(ctx) and ImGui.IsAnyItemFocused(ctx)
+end
+
 -- An unchosen button wears the theme's grey, a chosen one the accent. Either
--- way its text is INK.
+-- way its text is INK. A chosen one also carries a bar under its label, so
+-- being chosen is not shown by colour alone.
 local function pick(label, selected, width, disabled)
   local pushed = 1
   if selected then
@@ -214,9 +309,14 @@ local function pick(label, selected, width, disabled)
   end
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, INK)
   if disabled then ImGui.BeginDisabled(ctx, true) end
-  local hit = ImGui.Button(ctx, label, width or 0, 0)
+  local hit = ImGui.Button(ctx, label, fit(label, width), 0)
   if disabled then ImGui.EndDisabled(ctx) end
   ImGui.PopStyleColor(ctx, pushed)
+  if selected then
+    local x1 = ImGui.GetItemRectMin(ctx)
+    local x2, y2 = ImGui.GetItemRectMax(ctx)
+    ImGui.DrawList_AddRectFilled(ImGui.GetWindowDrawList(ctx), x1 + px(8), y2 - px(5), x2 - px(8), y2 - px(3), INK)
+  end
   if hit then
     local mx, my = ImGui.GetMousePos(ctx)
     ui.lastClick = { mx, my }
@@ -224,42 +324,70 @@ local function pick(label, selected, width, disabled)
   return hit and not disabled and not ui.blockClicks
 end
 
--- A button at a place on the screen.
+-- A button at a place on the page, in points.
 local function pickAt(x, y, label, selected, width, disabled)
-  ImGui.SetCursorScreenPos(ctx, x, y)
+  at(x, y)
   return pick(label, selected, width, disabled)
 end
 
--- A button that asks once more before doing something that costs: the first
--- click turns it into "Sure?" for three seconds.
-local function sure(id, label, width, disabled)
-  local armed = ui.confirm.id == id and ui.tp - ui.confirm.t < 3
-  if pick(armed and "Sure?" or label, armed, width, disabled) then
-    if armed then ui.confirm = {}; return true end
-    ui.confirm = { id = id, t = ui.tp }
-  end
-  return false
+-- An invisible button over something drawn (a crate, a tier, a banner): the
+-- mouse and the keyboard both reach it.
+local function hit(id, x, y, w, h)
+  at(x, y)
+  return ImGui.InvisibleButton(ctx, id, math.max(1, w * S), math.max(1, h * S)) and not ui.blockClicks
 end
 
+-- A tooltip for the item just drawn, when the mouse is over it or the
+-- keyboard is on it: nothing is shown to the mouse alone.
 local function tip(text)
-  if text and ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, text) end
+  if text and (ImGui.IsItemHovered(ctx) or keyFocused()) then ImGui.SetTooltip(ctx, text) end
+end
+
+-- A button that asks once more before doing something that costs: the first
+-- click turns it into "Click Again to ..." (0015). It stays that way until
+-- it is clicked again, another one is, Esc is pressed or the page changes -
+-- never on a timer (0018). Its ID does not change with its label, so the
+-- keyboard stays on it: Return, then Return again.
+local function sure(id, label, width, disabled, verb)
+  local armed = ui.confirm.id == id
+  local text = armed and ("Click Again to " .. (verb or "Confirm")) or label
+  if pick(text .. "###" .. id, armed, width, disabled) then
+    if armed then ui.confirm = {}; return true end
+    ui.confirm = { id = id }
+  end
+  if armed then tip("Esc or another page cancels.") end
+  return false
 end
 
 local function dim(text)
   ImGui.PushStyleColor(ctx, ImGui.Col_Text, DIM)
-  ImGui.Text(ctx, text)
+  ImGui.TextWrapped(ctx, text)
   ImGui.PopStyleColor(ctx, 1)
+end
+
+-- Lays buttons out in rows no wider than w (points), 12 apart: returns each
+-- one's x, y from (x, y), and the height used.
+local function flowRows(x, y, w, widths)
+  local out, cx, cy = {}, x, y
+  for i, bwid in ipairs(widths) do
+    if i > 1 and cx + bwid > x + w then cx, cy = x, cy + 28 + 12 end
+    out[i] = { cx, cy }
+    cx = cx + bwid + 12
+  end
+  return out, (#widths > 0) and (cy - y + 28) or 0
 end
 
 ------------------------------------------------------------------------------
 -- Text on the draw list
 ------------------------------------------------------------------------------
 
+-- Sizes and places here are in points; the font of the current text size
+-- (made at its own pixel size, font.px) is measured and drawn at size * S.
 local function measure(font, size, s)
   ImGui.PushFont(ctx, font.f)
   local w, h = ImGui.CalcTextSize(ctx, s)
   ImGui.PopFont(ctx)
-  local k = size / font.size
+  local k = size / font.px
   return w * k, h * k
 end
 
@@ -268,7 +396,15 @@ local function dtext(dl, font, size, x, y, col, s, align)
     local w = measure(font, size, s)
     x = (align == "center") and (x - w / 2) or (x - w)
   end
-  ImGui.DrawList_AddTextEx(dl, font.f, size, x, y, col, s)
+  ImGui.DrawList_AddTextEx(dl, font.f, size * S, X(x), Y(y), col, s)
+end
+
+-- The size at most `size` at which `s` fits in `maxw`: a title shrinks
+-- rather than running off a narrow stage.
+local function fitSize(font, size, s, maxw)
+  local w = measure(font, size, s)
+  if w <= maxw or w <= 0 then return size end
+  return math.max(10, size * maxw / w)
 end
 
 -- Lines of text no wider than maxw, cached: a vault of four hundred ideas
@@ -296,6 +432,8 @@ local function wrap(font, size, s, maxw)
   return lines
 end
 
+-- Returns the height used, and whether anything was cut short (then the
+-- caller shows the whole text on hover or focus).
 local function wrapText(dl, font, size, x, y, maxw, col, s, maxLines, gap)
   local lines = wrap(font, size, s, maxw)
   local lh = size + (gap or 3)
@@ -303,9 +441,26 @@ local function wrapText(dl, font, size, x, y, maxw, col, s, maxLines, gap)
   for i = 1, n do
     local line = lines[i]
     if i == n and n < #lines then line = line .. "..." end
-    ImGui.DrawList_AddTextEx(dl, font.f, size, x, y + (i - 1) * lh, col, line)
+    dtext(dl, font, size, x, y + (i - 1) * lh, col, line)
   end
-  return n * lh
+  return n * lh, n < #lines
+end
+
+-- Centred lines no wider than maxw, about cx; returns the height used.
+local function ctext(dl, font, size, cx, y, maxw, col, s, gap)
+  local lines = wrap(font, size, s, maxw)
+  local lh = size + (gap or 4)
+  for i, line in ipairs(lines) do dtext(dl, font, size, cx, y + (i - 1) * lh, col, line, "center") end
+  return #lines * lh
+end
+
+-- One line cut to maxw with "...", and whether it was cut.
+local function clipLine(font, size, s, maxw)
+  if measure(font, size, s) <= maxw then return s, false end
+  while #s > 1 and measure(font, size, s .. "...") > maxw do
+    s = s:sub(1, -2):gsub("[\xC0-\xFF][\x80-\xBF]*$", "")
+  end
+  return s .. "...", true
 end
 
 ------------------------------------------------------------------------------
@@ -314,21 +469,35 @@ end
 
 local D = {}
 
-function D.rect(dl, x1, y1, x2, y2, col, r) ImGui.DrawList_AddRectFilled(dl, x1, y1, x2, y2, col, r or 0) end
-function D.frame(dl, x1, y1, x2, y2, col, r, th) ImGui.DrawList_AddRect(dl, x1, y1, x2, y2, col, r or 0, 0, th or 1) end
-function D.circle(dl, x, y, r, col) ImGui.DrawList_AddCircleFilled(dl, x, y, r, col) end
-function D.ring(dl, x, y, r, col, th) ImGui.DrawList_AddCircle(dl, x, y, r, col, 0, th or 1) end
-function D.line(dl, x1, y1, x2, y2, col, th) ImGui.DrawList_AddLine(dl, x1, y1, x2, y2, col, th or 1) end
-function D.tri(dl, x1, y1, x2, y2, x3, y3, col) ImGui.DrawList_AddTriangleFilled(dl, x1, y1, x2, y2, x3, y3, col) end
+-- Every shape takes points and draws at the current scale (see X, Y).
+function D.rect(dl, x1, y1, x2, y2, col, r) ImGui.DrawList_AddRectFilled(dl, X(x1), Y(y1), X(x2), Y(y2), col, (r or 0) * S) end
+function D.frame(dl, x1, y1, x2, y2, col, r, th) ImGui.DrawList_AddRect(dl, X(x1), Y(y1), X(x2), Y(y2), col, (r or 0) * S, 0, (th or 1) * S) end
+function D.circle(dl, x, y, r, col) ImGui.DrawList_AddCircleFilled(dl, X(x), Y(y), r * S, col) end
+function D.ring(dl, x, y, r, col, th) ImGui.DrawList_AddCircle(dl, X(x), Y(y), r * S, col, 0, (th or 1) * S) end
+function D.line(dl, x1, y1, x2, y2, col, th) ImGui.DrawList_AddLine(dl, X(x1), Y(y1), X(x2), Y(y2), col, (th or 1) * S) end
+function D.tri(dl, x1, y1, x2, y2, x3, y3, col) ImGui.DrawList_AddTriangleFilled(dl, X(x1), Y(y1), X(x2), Y(y2), X(x3), Y(y3), col) end
 function D.quad(dl, a, b, c, d, col)
-  ImGui.DrawList_AddQuadFilled(dl, a[1], a[2], b[1], b[2], c[1], c[2], d[1], d[2], col)
+  ImGui.DrawList_AddQuadFilled(dl, X(a[1]), Y(a[2]), X(b[1]), Y(b[2]), X(c[1]), Y(c[2]), X(d[1]), Y(d[2]), col)
 end
+-- Top-left, top-right, bottom-right, bottom-left corner colours.
+function D.shade4(dl, x1, y1, x2, y2, c1, c2, c3, c4)
+  ImGui.DrawList_AddRectFilledMultiColor(dl, X(x1), Y(y1), X(x2), Y(y2), c1, c2, c3, c4)
+end
+function D.clip(dl, x1, y1, x2, y2) ImGui.DrawList_PushClipRect(dl, X(x1), Y(y1), X(x2), Y(y2), true) end
+function D.unclip(dl) ImGui.DrawList_PopClipRect(dl) end
 
 function D.arc(dl, x, y, r, a1, a2, col, th)
   if a2 - a1 < 0.01 then return end
   ImGui.DrawList_PathClear(dl)
-  ImGui.DrawList_PathArcTo(dl, x, y, r, a1, a2, 48)
-  ImGui.DrawList_PathStroke(dl, col, 0, th)
+  ImGui.DrawList_PathArcTo(dl, X(x), Y(y), r * S, a1, a2, 48)
+  ImGui.DrawList_PathStroke(dl, col, 0, (th or 1) * S)
+end
+
+-- A filled slice of a circle.
+function D.pie(dl, x, y, r, a1, a2, col)
+  ImGui.DrawList_PathClear(dl)
+  ImGui.DrawList_PathArcTo(dl, X(x), Y(y), r * S, a1, a2, 24)
+  ImGui.DrawList_PathFillConvex(dl, col)
 end
 
 function D.glow(dl, x1, y1, x2, y2, col, r, strength)
@@ -631,9 +800,7 @@ local function drawBanner(dl, cx, cy, r, b, t)
   else D.circle(dl, cx, cy, r, c1) end
   local ir = r * 0.62
   if b.pattern == "split" then
-    ImGui.DrawList_PathClear(dl)
-    ImGui.DrawList_PathArcTo(dl, cx, cy, ir, math.pi / 2, math.pi * 1.5, 24)
-    ImGui.DrawList_PathFillConvex(dl, c2)
+    D.pie(dl, cx, cy, ir, math.pi / 2, math.pi * 1.5, c2)
   elseif b.pattern == "stripes" then
     for i = -1, 1 do D.rect(dl, cx - ir * 0.8, cy + i * ir * 0.55 - ir * 0.12, cx + ir * 0.8, cy + i * ir * 0.55 + ir * 0.12, c2) end
   elseif b.pattern == "chevron" then
@@ -665,7 +832,7 @@ local function dropCard(dl, x, y, w, h, d, t, scale)
   local col = RC(d.rarity)
   if d.rarity >= L.LEGENDARY then D.glow(dl, x1, y1, x2, y2, col, 8, 0.7 + 0.3 * wave(t * 4)) end
   D.rect(dl, x1, y1, x2, y2, SUNKEN, 8)
-  ImGui.DrawList_AddRectFilledMultiColor(dl, x1 + 2, y1 + 2, x2 - 2, y1 + sh * 0.45, A(col, 0.35), A(col, 0.35), A(col, 0), A(col, 0))
+  D.shade4(dl, x1 + 2, y1 + 2, x2 - 2, y1 + sh * 0.45, A(col, 0.35), A(col, 0.35), A(col, 0), A(col, 0))
   D.frame(dl, x1, y1, x2, y2, col, 8, d.rarity >= L.EPIC and 2.5 or 1.5)
   if scale < 0.92 then return end
   local pad = 10
@@ -675,10 +842,18 @@ local function dropCard(dl, x, y, w, h, d, t, scale)
   else icon(dl, d.icon, cx, y1 + 34, 18, iconCol) end
   dtext(dl, FONT.body, 12, cx, y1 + 60, RT(d.rarity), L.RARITY[d.rarity].name:upper(), "center")
   dtext(dl, FONT.body, 12, cx, y1 + 75, DIM, d.name or "", "center")
-  local used = wrapText(dl, FONT.bold, 15, x1 + pad, y1 + 96, sw - pad * 2, TEXT, d.text or "", 4)
+  local used, cut = wrapText(dl, FONT.bold, 15, x1 + pad, y1 + 96, sw - pad * 2, TEXT, d.text or "", 4)
   if d.sub and d.sub ~= "" then
-    wrapText(dl, FONT.body, 12, x1 + pad, y1 + 100 + used, sw - pad * 2, DIM, d.sub, math.max(1, math.floor((sh - 110 - used) / 15)))
+    local _, cut2 = wrapText(dl, FONT.body, 12, x1 + pad, y1 + 100 + used, sw - pad * 2, DIM, d.sub,
+                             math.max(1, math.floor((sh - 110 - used) / 15)))
+    cut = cut or cut2
   end
+  return cut
+end
+
+-- The whole of a card, for its tooltip when the card had to cut it short.
+local function cardWhole(d)
+  return (d.text or "") .. ((d.sub and d.sub ~= "") and ("\n" .. d.sub) or "")
 end
 
 -- Lines describing a piece of gear, for its tooltip and its panel.
@@ -785,12 +960,25 @@ end
 -- The header: banner, name and title, the level bar, coins
 ------------------------------------------------------------------------------
 
+local function mouseIn(x1, y1, x2, y2)
+  if not ImGui.IsWindowHovered(ctx) then return false end
+  local mx, my = ImGui.GetMousePos(ctx)
+  mx, my = LX(mx), LY(my)
+  return mx >= x1 and mx < x2 and my >= y1 and my < y2
+end
+
+-- Wide: banner, name, the level bar, coins on the right. Narrow (or with a
+-- long name at a large text size): the coins and gear score go under the
+-- bar, so nothing sits on top of anything.
 local function drawHeader()
   local dl = ImGui.GetWindowDrawList(ctx)
-  local x, y = ImGui.GetCursorScreenPos(ctx)
-  local w = select(1, ImGui.GetContentRegionAvail(ctx))
-  local h = 64
-  ImGui.InvisibleButton(ctx, "header", math.max(1, w), h)
+  local sx, sy = ImGui.GetCursorScreenPos(ctx)
+  origin(sx, sy)
+  local x, y = sx, sy
+  local w = select(1, ImGui.GetContentRegionAvail(ctx)) / S
+  local wide = w >= 520
+  local h = wide and 64 or 92
+  ImGui.Dummy(ctx, math.max(1, w * S), h * S)
   local t = ui.tp
 
   -- Banner with the level on it.
@@ -801,30 +989,42 @@ local function drawHeader()
   D.ring(dl, x + 30, y + 54, 13, XP_COL, 2)
   dtext(dl, FONT.bold, 13, x + 30, y + 47, TEXT, tostring(lvl), "center")
 
-  -- Name, title, and the bar.
+  -- Name and title, cut short (with the whole on hover) if the coins need
+  -- the room.
   local nx = x + 70
-  dtext(dl, FONT.bold, 17, nx, y + 4, TEXT, st.profile.name)
+  local right = wide and (x + w - 160) or (x + w)
+  local nameRoom = right - nx
+  local name, cutName = clipLine(FONT.bold, 17, st.profile.name, nameRoom)
+  dtext(dl, FONT.bold, 17, nx, y + 4, TEXT, name)
   local title = G.activeTitle(st)
-  if title ~= "" then
-    local nw = measure(FONT.bold, 17, st.profile.name)
-    dtext(dl, FONT.body, 13, nx + nw + 10, y + 7, DIM, title)
+  local cutTitle = false
+  if title ~= "" and not cutName then
+    local nw = measure(FONT.bold, 17, name)
+    local shownTitle
+    shownTitle, cutTitle = clipLine(FONT.body, 13, title, nameRoom - nw - 10)
+    if nameRoom - nw - 10 > 30 then dtext(dl, FONT.body, 13, nx + nw + 10, y + 7, DIM, shownTitle)
+    else cutTitle = true end
   end
-  local barW = math.max(120, w - 70 - 190)
+  if (cutName or cutTitle) and mouseIn(nx, y, right, y + 24) then
+    ImGui.SetTooltip(ctx, st.profile.name .. (title ~= "" and ("  -  " .. title) or ""))
+  end
+
+  local barW = math.max(80, (wide and (w - 70 - 190) or (w - 80)))
   local frac = shown - lvl
   local by = y + 30
   D.bar(dl, nx, by, barW, 12, frac, XP_COL)
   if st.boost > 0 then
     -- Boost: yellow stripes run along the bar, because the boost is on.
-    ImGui.DrawList_PushClipRect(dl, nx, by, nx + barW * math.max(frac, 0.02), by + 12, true)
+    D.clip(dl, nx, by, nx + barW * math.max(frac, 0.02), by + 12)
     for i = -1, math.floor(barW / 14) + 1 do
-      local sx = nx + i * 14 + (t * 30) % 14
-      D.quad(dl, { sx, by + 12 }, { sx + 6, by + 12 }, { sx + 12, by }, { sx + 6, by }, A(SELECTED, 0.45))
+      local stx = nx + i * 14 + (ui.calm and 0 or (t * 30) % 14)
+      D.quad(dl, { stx, by + 12 }, { stx + 6, by + 12 }, { stx + 12, by }, { stx + 6, by }, A(SELECTED, 0.45))
     end
-    ImGui.DrawList_PopClipRect(dl)
+    D.unclip(dl)
   end
   local ex = nx + math.max(6, barW * frac)
   D.halo(dl, ex, by + 6, 10, XP_COL, 0.5 + 0.3 * wave(t * 5))
-  ui.xpPos = { ex, by }
+  ui.xpPos = { X(ex), Y(by) }
   local need = G.levelNeed(lvl)
   local label = string.format("Level %d   %s / %s XP", lvl, fmtNum(frac * need), fmtNum(need))
   dtext(dl, FONT.body, 12, nx, by + 15, DIM, label)
@@ -832,43 +1032,59 @@ local function drawHeader()
 
   -- Coins, bumped as they land.
   local bump = fx.bumps.coins or 0
-  local cx = x + w - 150
-  ICON.coin(dl, cx, y + 20, 12 + bump * 5)
-  ui.coinPos = { cx, y + 20 }
-  dtext(dl, FONT.bold, 20 + bump * 4, cx + 20, y + 9 - bump * 2, COIN, fmtNum(ui.disp.coins))
+  local cx, cy = x + w - 150, y + 20
+  if not wide then cx, cy = nx + 12, y + 74 end
+  ICON.coin(dl, cx, cy, 12 + bump * 5)
+  ui.coinPos = { X(cx), Y(cy) }
+  dtext(dl, FONT.bold, 20 + bump * 4, cx + 20, cy - 11 - bump * 2, COIN, fmtNum(ui.disp.coins))
   local score = G.gearScore(st)
-  icon(dl, "gem", cx, y + 48, 8, CONTROL)
-  dtext(dl, FONT.body, 12, cx + 20, y + 41, DIM, "Gear score " .. score)
-  ImGui.Dummy(ctx, 0, 2)
+  local gx, gy = cx, cy + 28
+  if not wide then gx, gy = cx + 30 + measure(FONT.bold, 20, fmtNum(ui.disp.coins)) + 24, cy end
+  icon(dl, "gem", gx, gy, 8, CONTROL)
+  dtext(dl, FONT.body, 12, gx + 14, gy - 7, DIM, "Gear score " .. score)
 end
 
--- Which tabs have something waiting: a dot like a game's.
+-- Which tabs have something waiting: a dot like a game's, and the same in
+-- words for its tooltip.
 local function tabDot(id)
   if id == "quests" then
-    if G.checkinAvailable(st, ui.epoch) then return true end
+    if G.checkinAvailable(st, ui.epoch) then return "Today's check-in is waiting." end
     for _, s in ipairs({ "daily", "weekly" }) do
-      for _, q in ipairs(st[s].quests) do if q.done and not q.claimed then return true end end
+      for _, q in ipairs(st[s].quests) do if q.done and not q.claimed then return "A finished quest is waiting to be claimed." end end
     end
   elseif id == "loot" then
-    for r = 1, 7 do if st.inv.crates[r] > 0 then return true end end
+    for r = 1, 7 do if st.inv.crates[r] > 0 then return "A crate is waiting to be opened." end end
   elseif id == "shop" then
-    for _, d in ipairs(st.shop.deals) do if not d.bought and st.coins >= d.price then return true end end
+    for _, d in ipairs(st.shop.deals) do if not d.bought and st.coins >= d.price then return "You have the coins for a daily deal." end end
   end
-  return false
+  return nil
 end
 
+-- The tabs, wrapping onto a second row when the window is narrow or the
+-- text is large.
 local function drawTabs()
   local dl = ImGui.GetWindowDrawList(ctx)
+  local avail = select(1, ImGui.GetContentRegionAvail(ctx))
+  local used = 0
   for i, tab in ipairs(TABS) do
-    if i > 1 then ImGui.SameLine(ctx) end
-    if pick(tab.label, ui.tab == tab.id, 0) and ui.tab ~= tab.id then
-      ui.tab, ui.tabT, ui.selected = tab.id, ui.tp, nil
+    local wpx = fit(tab.label, 64)
+    if i > 1 then
+      if used + px(12) + wpx <= avail then ImGui.SameLine(ctx, 0, px(12)); used = used + px(12)
+      else used = 0 end
     end
-    if tabDot(tab.id) then
+    used = used + wpx
+    if pick(tab.label, ui.tab == tab.id, 64) and ui.tab ~= tab.id then
+      ui.tab, ui.tabT, ui.selected, ui.confirm = tab.id, ui.tp, nil, {}
+    end
+    local waiting = tabDot(tab.id)
+    if waiting then
       local _, y1 = ImGui.GetItemRectMin(ctx)
       local x2 = select(1, ImGui.GetItemRectMax(ctx))
       local p = 0.5 + 0.5 * wave(ui.tp * 6)
-      D.circle(dl, x2 - 2, y1 + 2, 4 + p, WARN)
+      -- A dark edge keeps the red dot 3:1 on the light button and the ground.
+      ImGui.DrawList_AddCircleFilled(dl, x2 - px(2), y1 + px(2), px(6) + p * S, INK)
+      ImGui.DrawList_AddCircleFilled(dl, x2 - px(2), y1 + px(2), px(4) + p * S, WARN)
+      tip(tab.label .. ": " .. waiting)
     end
   end
 end
@@ -883,28 +1099,33 @@ end
 local function area()
   local x, y = ImGui.GetCursorScreenPos(ctx)
   local w = select(1, ImGui.GetContentRegionAvail(ctx))
-  return x, y, math.max(260, w)
+  origin(x, y)
+  ui.pageW = math.max(260, w / S)
+  return x, y, ui.pageW
 end
 
+-- The page's height (and width, so a page narrower than its least width
+-- scrolls sideways rather than being cut off).
 local function finish(x, y)
-  ImGui.SetCursorScreenPos(ctx, x, y)
-  ImGui.Dummy(ctx, 1, 8)
+  at(x, y)
+  ImGui.Dummy(ctx, px(ui.pageW), px(12))
 end
 
 local function panel(dl, x, y, w, h, col)
   D.rect(dl, x, y, x + w, y + h, col or SUNKEN, 6)
 end
 
+-- A heading, and a note beside it - or under it, wrapped, when the page is
+-- too narrow for both on one line.
 local function sectionTitle(dl, x, y, text, right)
   dtext(dl, FONT.bold, 15, x, y, TEXT, text)
-  if right then dtext(dl, FONT.body, 12, x + measure(FONT.bold, 15, text) + 12, y + 3, DIM, right) end
-  return y + 24
-end
-
-local function mouseIn(x1, y1, x2, y2)
-  if not ImGui.IsWindowHovered(ctx) then return false end
-  local mx, my = ImGui.GetMousePos(ctx)
-  return mx >= x1 and mx < x2 and my >= y1 and my < y2
+  if not right then return y + 24 end
+  local tw = measure(FONT.bold, 15, text) + 12
+  if tw + measure(FONT.body, 12, right) <= ui.pageW then
+    dtext(dl, FONT.body, 12, x + tw, y + 3, DIM, right)
+    return y + 24
+  end
+  return y + 22 + wrapText(dl, FONT.body, 12, x, y + 20, ui.pageW, DIM, right) + 4
 end
 
 local function headline(season, tier)
@@ -923,38 +1144,74 @@ end
 -- Pass: the season, the clock, the track
 ------------------------------------------------------------------------------
 
+-- The recent loot list, its long names cut short with the whole on hover.
+local function recentLoot(dl, x, y, w, n)
+  for i = 1, math.min(n, #st.recent) do
+    local d = st.recent[i]
+    local ry = y + (i - 1) * 24
+    icon(dl, d.icon, x + 8, ry + 8, 7, d.type == "coins" and COIN or RC(d.rarity))
+    local line, cut = clipLine(FONT.body, 13, d.text or "", w - 24)
+    dtext(dl, FONT.body, 13, x + 22, ry, RT(d.rarity), line)
+    if cut and mouseIn(x, ry - 2, x + w, ry + 20) then ImGui.SetTooltip(ctx, d.text) end
+  end
+  return math.min(n, #st.recent) * 24
+end
+
 local function pagePass()
   local dl = ImGui.GetWindowDrawList(ctx)
   local x, y, w = area()
   local t = ui.tp
   local season = st.pass.season
-
-  -- The season.
-  panel(dl, x, y, w, 70)
-  ImGui.DrawList_AddRectFilledMultiColor(dl, x, y, x + w, y + 70, A(PASS_COL, 0.18), A(PASS_COL, 0.0), A(PASS_COL, 0.0), A(PASS_COL, 0.18))
-  dtext(dl, FONT.body, 12, x + 14, y + 8, PASS_TEXT, "SEASON " .. season)
-  dtext(dl, FONT.big, 26, x + 14, y + 22, TEXT, L.seasonName(season))
-  dtext(dl, FONT.body, 12, x + w - 14, y + 10, DIM, "ends in " .. fmtDur(G.secsToNextSeason(ui.epoch)), "right")
   local tier = st.pass.tier
   local bonus = tier > L.SEASON_TIERS
-  dtext(dl, FONT.bold, 15, x + w - 14, y + 28, TEXT,
-        bonus and ("Bonus tier " .. (tier - L.SEASON_TIERS)) or ("Tier " .. tier .. " / " .. L.SEASON_TIERS), "right")
-  D.bar(dl, x + w - 214, y + 52, 200, 6, math.min(1, tier / L.SEASON_TIERS), PASS_COL)
-  y = y + 82
+  local tierText = bonus and ("Bonus tier " .. (tier - L.SEASON_TIERS)) or ("Tier " .. tier .. " / " .. L.SEASON_TIERS)
+
+  -- The season. Narrow, the tier goes under the name rather than beside it.
+  local seasonName = L.seasonName(season)
+  local wideSeason = w >= 14 + measure(FONT.big, 26, seasonName) + 24 + 214
+  local sh = wideSeason and 70 or 110
+  panel(dl, x, y, w, sh)
+  D.shade4(dl, x, y, x + w, y + sh, A(PASS_COL, 0.18), A(PASS_COL, 0.0), A(PASS_COL, 0.0), A(PASS_COL, 0.18))
+  dtext(dl, FONT.body, 12, x + 14, y + 8, PASS_TEXT, "SEASON " .. season)
+  local ends = "ends in " .. fmtDur(G.secsToNextSeason(ui.epoch))
+  dtext(dl, FONT.body, 12, x + w - 14, y + 10, DIM, ends, "right")
+  dtext(dl, FONT.big, fitSize(FONT.big, 26, seasonName, w - 28), x + 14, y + 22, TEXT, seasonName)
+  if wideSeason then
+    dtext(dl, FONT.bold, 15, x + w - 14, y + 28, TEXT, tierText, "right")
+    D.bar(dl, x + w - 214, y + 52, 200, 6, math.min(1, tier / L.SEASON_TIERS), PASS_COL)
+  else
+    dtext(dl, FONT.bold, 15, x + 14, y + 60, TEXT, tierText)
+    D.bar(dl, x + 14, y + 88, w - 28, 6, math.min(1, tier / L.SEASON_TIERS), PASS_COL)
+  end
+  y = y + sh + 12
 
   -- The clock: a ring filling towards the next tier, yellow while it runs.
+  -- Narrow, the numbers go under the ring.
   local frac = st.pass.secs / G.TIER_SECONDS
+  local today = st.days[G.dayKey(ui.epoch)] or 0
+  local rows = {
+    { "This session", fmtDur(ss.active) },
+    { "Today", fmtDur(today) },
+    { "This week", fmtDur(G.weekSeconds(st, ui.epoch)) },
+    { "Check-in streak", st.checkin.streak .. " day" .. (st.checkin.streak == 1 and "" or "s") },
+    { "Next big reward", "in " .. fmtDur((3 - tier % 4) * G.TIER_SECONDS + G.TIER_SECONDS - st.pass.secs) },
+  }
+  if st.boost > 0 then rows[#rows + 1] = { "XP Boost", fmtClock(st.boost) .. " left" } end
+  local besideRing = w >= 430
+  local loot = w > 660 and #st.recent > 0
+  local ph = besideRing and 192 or (192 + #rows * 27 + 8)
   local rcx, rcy, rr = x + 96, y + 96, 78
-  panel(dl, x, y, w, 192)
+  if not besideRing then rcx = x + w / 2 end
+  panel(dl, x, y, w, ph)
   local live = not ss.idle
-  local ringCol = live and SELECTED or GRAB
+  local ringCol = live and SELECTED or MARK
   if live then D.halo(dl, rcx, rcy, rr + 18, SELECTED, 0.10 + 0.05 * wave(t * 2)) end
   D.ring(dl, rcx, rcy, rr, DEEP, 14)
   D.arc(dl, rcx, rcy, rr, -math.pi / 2, -math.pi / 2 + frac * math.pi * 2, ringCol, 14)
   local ea = -math.pi / 2 + frac * math.pi * 2
   if live then
     D.circle(dl, rcx + math.cos(ea) * rr, rcy + math.sin(ea) * rr, 9 + 2 * wave(t * 6), SELECTED)
-    if math.floor(t * 8) % 3 == 0 then F.twinkle(fx, rcx + math.cos(ea) * rr, rcy + math.sin(ea) * rr, SELECTED, 4) end
+    if math.floor(t * 8) % 3 == 0 then F.twinkle(fx, X(rcx + math.cos(ea) * rr), Y(rcy + math.sin(ea) * rr), SELECTED, 4) end
   end
   dtext(dl, FONT.body, 11, rcx, rcy - 36, DIM, "NEXT TIER IN", "center")
   dtext(dl, FONT.big, 30, rcx, rcy - 20, TEXT, fmtClock(G.TIER_SECONDS - st.pass.secs), "center")
@@ -969,55 +1226,46 @@ local function pagePass()
       dtext(dl, FONT.bold, 10 + zt * 10, rcx + 30 + zt * 30, rcy - 50 - zt * 40, A(DIM, 1 - zt), "z")
     end
   end
-  -- Four pips: where this hour is.
+  -- Four pips: where this hour is. Reached ones are filled, the rest only
+  -- outlined, so the shape says it as well as the colour.
   for i = 1, 4 do
     local on = (tier % 4) >= i
-    local px = rcx - 27 + (i - 1) * 18
-    if i == 4 then D.star(dl, px, rcy + 50, 7, on and PASS_COL or RULE)
-    else D.circle(dl, px, rcy + 50, 5, on and PASS_COL or RULE) end
+    local ppx = rcx - 27 + (i - 1) * 18
+    if i == 4 then
+      if on then D.star(dl, ppx, rcy + 50, 7, PASS_COL)
+      else D.star(dl, ppx, rcy + 50, 7, MARK); D.star(dl, ppx, rcy + 50, 4, SUNKEN) end
+    elseif on then D.circle(dl, ppx, rcy + 50, 5, PASS_COL)
+    else D.ring(dl, ppx, rcy + 50, 4.5, MARK, 1.5) end
   end
 
-  -- Beside the clock: the numbers that matter today.
-  local sx = x + 200
-  local today = st.days[G.dayKey(ui.epoch)] or 0
-  local rows = {
-    { "This session", fmtDur(ss.active) },
-    { "Today", fmtDur(today) },
-    { "This week", fmtDur(G.weekSeconds(st, ui.epoch)) },
-    { "Check-in streak", st.checkin.streak .. " day" .. (st.checkin.streak == 1 and "" or "s") },
-    { "Next big reward", "in " .. fmtDur((3 - tier % 4) * G.TIER_SECONDS + G.TIER_SECONDS - st.pass.secs) },
-  }
-  if st.boost > 0 then rows[#rows + 1] = { "XP Boost", fmtClock(st.boost) .. " left" } end
+  -- Beside (or under) the clock: the numbers that matter today.
+  local sx, sy = x + 200, y + 16
+  if not besideRing then sx, sy = x + math.max(14, w / 2 - 130), y + 196 end
+  local labelW = 130
   for i, row in ipairs(rows) do
-    local ry = y + 16 + (i - 1) * 27
+    local ry = sy + (i - 1) * 27
     dtext(dl, FONT.body, 13, sx, ry, DIM, row[1])
-    dtext(dl, FONT.bold, 15, sx + 130, ry - 1, TEXT, row[2])
+    dtext(dl, FONT.bold, 15, sx + labelW, ry - 1, TEXT, row[2])
   end
 
   -- Recent loot, if there's room beside.
-  if w > 620 then
+  if loot then
     local lx = x + w - 230
     dtext(dl, FONT.bold, 13, lx, y + 14, TEXT, "Recent loot")
-    for i = 1, math.min(6, #st.recent) do
-      local d = st.recent[i]
-      local ry = y + 36 + (i - 1) * 24
-      icon(dl, d.icon, lx + 8, ry + 8, 7, d.type == "coins" and COIN or RC(d.rarity))
-      local s = d.text or ""
-      if #s > 28 then s = s:sub(1, 26) .. "..." end
-      dtext(dl, FONT.body, 13, lx + 22, ry, RT(d.rarity), s)
-    end
+    recentLoot(dl, lx, y + 36, 220, 6)
   end
-  y = y + 204
+  y = y + ph + 12
 
   -- The track: tiers sliding past as the clock runs, the hour ones bigger.
-  y = sectionTitle(dl, x, y, "Battle pass track", "hover a tier to see what it holds")
+  -- Each tier is a stop for the keyboard too: its tooltip says what it holds.
+  y = sectionTitle(dl, x, y, "Battle pass track", "point at a tier, or Tab to it, to see what it holds")
   local trackH = 132
   panel(dl, x, y, w, trackH, DEEP)
   local pos = tier + frac
   local spacing = 92
   local nowX = x + math.min(w * 0.3, 240)
   local midY = y + 58
-  ImGui.DrawList_PushClipRect(dl, x, y, x + w, y + trackH, true)
+  D.clip(dl, x, y, x + w, y + trackH)
   D.line(dl, x, midY, x + w, midY, RULE, 4)
   D.line(dl, x, midY, nowX, midY, PASS_COL, 4)
   local first = math.max(1, math.floor(pos) - 3)
@@ -1045,29 +1293,28 @@ local function pagePass()
       D.check(dl, x1 + cw - 8, y1 + 8, 8, INK)
     end
     if big then dtext(dl, FONT.body, 10, cx, y1 + ch + 4, PASS_TEXT, h.kind == "big" and "HOUR" or h.kind:upper(), "center") end
-    if mouseIn(x1, y1, x1 + cw, y1 + ch) then
-      local lines = { "Tier " .. n .. (got and "  (unlocked)" or ("  -  in " .. fmtDur((n - pos) * G.TIER_SECONDS) .. " of active time")) }
-      for _, d in ipairs(h.list) do
-        local what = (d.type == "coins") and (d.amount .. " coins") or (L.RARITY[d.rarity].name .. " " .. (d.type == "crate" and "Crate" or d.name))
-        lines[#lines + 1] = "  " .. what
-      end
+    local lines = { "Tier " .. n .. (got and "  (unlocked)" or ("  -  in " .. fmtDur((n - pos) * G.TIER_SECONDS) .. " of active time")) }
+    for _, d in ipairs(h.list) do
+      local what = (d.type == "coins") and (d.amount .. " coins") or (L.RARITY[d.rarity].name .. " " .. (d.type == "crate" and "Crate" or d.name))
+      lines[#lines + 1] = "  " .. what
+    end
+    -- Only a whole card on the track is a stop: one half out of view is not.
+    if x1 >= x and x1 + cw <= x + w then
+      hit("tier" .. n, x1, y1, cw, ch)
+      if ImGui.IsItemHovered(ctx) or keyFocused() then tipText = table.concat(lines, "\n") end
+    elseif mouseIn(x1, y1, x1 + cw, y1 + ch) then
       tipText = table.concat(lines, "\n")
     end
   end
   -- The marker for now.
   D.line(dl, nowX, y + 6, nowX, y + trackH - 6, A(SELECTED, 0.8), 2)
-  ImGui.DrawList_PopClipRect(dl)
+  D.unclip(dl)
   if tipText then ImGui.SetTooltip(ctx, tipText) end
   y = y + trackH + 14
 
-  if w <= 620 and #st.recent > 0 then
+  if not loot and #st.recent > 0 then
     y = sectionTitle(dl, x, y, "Recent loot")
-    for i = 1, math.min(6, #st.recent) do
-      local d = st.recent[i]
-      icon(dl, d.icon, x + 8, y + 8, 7, d.type == "coins" and COIN or RC(d.rarity))
-      dtext(dl, FONT.body, 13, x + 22, y, RT(d.rarity), d.text or "")
-      y = y + 22
-    end
+    y = y + recentLoot(dl, x, y, w, 6)
   end
   finish(x, y)
 end
@@ -1076,85 +1323,104 @@ end
 -- Quests: check-in, daily, weekly
 ------------------------------------------------------------------------------
 
+-- A quest: its text, a bar, how far, the reward and Claim or Reroll. Wide,
+-- the button sits at the right; narrow, under the rest. The height follows
+-- what it holds.
 local function questCard(dl, x, y, w, scope, i, q)
-  local h = 66
   local done = q.done
+  local side = w >= 420
+  local textW = side and (w - 14 - 132) or (w - 28)
+  local textLines = wrap(FONT.bold, 15, q.text, textW)
+  local unit = G.QUESTS[q.kind] and G.QUESTS[q.kind].unit or 1
+  local prog = string.format("%d / %d", math.floor(q.progress / unit), math.floor(q.target / unit)) .. (unit == 60 and " min" or "")
+  local reward = fmtNum(q.coins) .. " coins  /  " .. q.xp .. " XP" .. (q.crate and ("  /  " .. L.RARITY[q.crate].name .. " Crate") or "")
+  local barW = side and math.max(80, w - 14 - 132) or (w - 28)
+  local oneLine = measure(FONT.body, 12, prog) + 16 + measure(FONT.body, 12, reward) <= barW
+  local th = #textLines * 18
+  local h = 10 + th + 6 + 10 + 4 + 16 + (oneLine and 0 or 16) + 10
+  if not side then h = h + 28 + 4 end
+  h = math.max(h, 66)
   panel(dl, x, y, w, h, done and GROUND or SUNKEN)
   local col = RC(q.rarity)
   D.rect(dl, x, y, x + 4, y + h, col, 2)
   if done and not q.claimed then D.glow(dl, x, y, x + w, y + h, SELECTED, 6, 0.5 + 0.5 * wave(ui.tp * 5)) end
-  dtext(dl, FONT.bold, 15, x + 14, y + 8, done and (q.claimed and DIM or TEXT) or TEXT, q.text)
+  for li, line in ipairs(textLines) do
+    dtext(dl, FONT.bold, 15, x + 14, y + 8 + (li - 1) * 18, (done and q.claimed) and DIM or TEXT, line)
+  end
   local key = scope .. i
   ui.qdisp = ui.qdisp or {}
   local real = q.progress / q.target
   ui.qdisp[key] = F.approach(ui.qdisp[key] or real, real, ui.dt, 6)
-  local barW = math.max(80, w - 250)
-  D.bar(dl, x + 14, y + 34, barW, 10, ui.qdisp[key], done and PASS_COL or col)
-  local unit = G.QUESTS[q.kind] and G.QUESTS[q.kind].unit or 1
-  local prog = string.format("%d / %d", math.floor(q.progress / unit), math.floor(q.target / unit))
-  dtext(dl, FONT.body, 12, x + 14, y + 47, DIM, prog .. (unit == 60 and " min" or ""))
-  local reward = fmtNum(q.coins) .. " coins  /  " .. q.xp .. " XP" .. (q.crate and ("  /  " .. L.RARITY[q.crate].name .. " Crate") or "")
-  dtext(dl, FONT.body, 12, x + 14 + barW, y + 47, DIM, reward, "right")
-  local bx = x + w - 110
+  local by = y + 10 + th + 6
+  D.bar(dl, x + 14, by, barW, 10, ui.qdisp[key], done and PASS_COL or col)
+  dtext(dl, FONT.body, 12, x + 14, by + 13, DIM, prog)
+  if oneLine then dtext(dl, FONT.body, 12, x + 14 + barW, by + 13, DIM, reward, "right")
+  else dtext(dl, FONT.body, 12, x + 14, by + 29, DIM, reward) end
+  local bx, byy = x + w - 110, y + (h - 28) / 2
+  if not side then bx, byy = x + 14, y + h - 28 - 10 end
   ImGui.PushID(ctx, key)
   if q.claimed then
-    D.check(dl, bx + 50, y + 32, 16, PASS_COL)
+    D.check(dl, bx + 48, byy + 14, 16, PASS_COL)
+    dtext(dl, FONT.body, 12, bx + 62, byy + 7, DIM, "claimed")
   elseif done then
-    if pickAt(bx, y + 20, "Claim", true, 96) then
+    if pickAt(bx, byy, "Claim", true, 96) then
       G.claimQuest(st, ss, scope, i)
       saveSoon()
     end
   else
-    if pickAt(bx, y + 20, "Reroll", false, 96, not G.canReroll(st, scope)) then
+    if pickAt(bx, byy, "Reroll", false, 96, not G.canReroll(st, scope)) then
       G.reroll(st, ss, scope, i, plugins)
       ui.qdisp[key] = 0
       saveSoon()
     end
-    tip("Swap this quest for a new one. Uses a Quest Reroll (you have " .. (st.inv.tokens.reroll or 0) .. ")")
+    tip("Swap this quest for a new one. Uses a Quest Reroll (you have " .. (st.inv.tokens.reroll or 0) .. ").")
   end
   ImGui.PopID(ctx)
-  return h + 8
+  return h + 12
 end
 
 local function pageQuests()
   local dl = ImGui.GetWindowDrawList(ctx)
   local x, y, w = area()
 
-  -- Check-in: a week of boxes.
+  -- Check-in: a week of boxes, in two rows when there is no room for seven.
   y = sectionTitle(dl, x, y, "Daily check-in", "streak " .. st.checkin.streak .. "  /  best " .. st.checkin.best ..
                    "  /  Streak Freezes " .. (st.inv.tokens.freeze or 0))
   local avail = G.checkinAvailable(st, ui.epoch)
   local day, streak = G.checkinPreview(st, ui.epoch)
-  local bw = math.min(84, (w - 6 * 8) / 7)
+  local perRow = math.max(1, math.min(7, math.floor((w + 8) / (60 + 8))))
+  local bwid = math.min(84, (w - (perRow - 1) * 8) / perRow)
   for i = 1, 7 do
-    local bx = x + (i - 1) * (bw + 8)
+    local c, rrow = (i - 1) % perRow, math.floor((i - 1) / perRow)
+    local bx, byy = x + c * (bwid + 8), y + rrow * 94
     local r = G.CHECKIN[i]
     local past = i < day or (not avail and i == day)
     local today = avail and i == day
-    panel(dl, bx, y, bw, 86, past and GROUND or SUNKEN)
-    if today then D.glow(dl, bx, y, bx + bw, y + 86, SELECTED, 6, 0.6 + 0.4 * wave(ui.tp * 4)) end
-    dtext(dl, FONT.body, 11, bx + bw / 2, y + 6, today and SELECTED or DIM, "DAY " .. i, "center")
-    if r.crate then local cr = (i == 7 and streak % 28 == 0) and 6 or r.crate; D.crate(dl, bx + bw / 2, y + 40, 30, RC(cr))
-    elseif r.token then icon(dl, L.TOKENS[r.token].icon, bx + bw / 2, y + 40, 12, RC(3))
-    else ICON.coin(dl, bx + bw / 2, y + 40, 12) end
+    panel(dl, bx, byy, bwid, 86, past and GROUND or SUNKEN)
+    if today then D.glow(dl, bx, byy, bx + bwid, byy + 86, SELECTED, 6, 0.6 + 0.4 * wave(ui.tp * 4)) end
+    -- Today says so in words, not only in yellow.
+    dtext(dl, FONT.body, 11, bx + bwid / 2, byy + 6, today and SELECTED or DIM, today and "TODAY" or ("DAY " .. i), "center")
+    if r.crate then local cr = (i == 7 and streak % 28 == 0) and 6 or r.crate; D.crate(dl, bx + bwid / 2, byy + 40, 30, RC(cr))
+    elseif r.token then icon(dl, L.TOKENS[r.token].icon, bx + bwid / 2, byy + 40, 12, RC(3))
+    else ICON.coin(dl, bx + bwid / 2, byy + 40, 12) end
     local what = r.coins and (r.coins .. "") or (r.crate and "crate" or "reroll")
-    dtext(dl, FONT.body, 11, bx + bw / 2, y + 62, DIM, what, "center")
+    dtext(dl, FONT.body, 11, bx + bwid / 2, byy + 62, DIM, what, "center")
     if past then
-      D.circle(dl, bx + bw - 10, y + 10, 8, PASS_COL)
-      D.check(dl, bx + bw - 10, y + 10, 8, INK)
+      D.circle(dl, bx + bwid - 10, byy + 10, 8, PASS_COL)
+      D.check(dl, bx + bwid - 10, byy + 10, 8, INK)
     end
   end
-  y = y + 96
+  y = y + math.ceil(7 / perRow) * 94 + 4
   if avail then
-    if pickAt(x, y, "Check in for day " .. day, true, 180) then
+    if pickAt(x, y, "Check In for Day " .. day, true, 180) then
       G.checkin(st, ss, ui.epoch)
       saveSoon()
     end
+    y = y + 28 + 16
   else
-    ImGui.SetCursorScreenPos(ctx, x, y + 3)
-    dim("Checked in today. Next check-in in " .. fmtDur(G.secsToNextDay(ui.epoch)) .. ".")
+    y = y + wrapText(dl, FONT.body, 13, x, y + 6, w, DIM,
+                     "Checked in today. Next check-in in " .. fmtDur(G.secsToNextDay(ui.epoch)) .. ".") + 22
   end
-  y = y + 40
 
   for _, scope in ipairs({ "daily", "weekly" }) do
     local set = st[scope]
@@ -1166,9 +1432,8 @@ local function pageQuests()
     y = y + 10
   end
   if #plugins > 0 then
-    ImGui.SetCursorScreenPos(ctx, x, y)
-    dim("Plugin quests choose from " .. pluginSource .. " (" .. #plugins .. " plugins). Change this on the Stats page.")
-    y = y + 22
+    y = y + wrapText(dl, FONT.body, 13, x, y, w, DIM,
+                     "Plugin quests choose from " .. pluginSource .. " (" .. #plugins .. " plugins). Change this on the Stats page.") + 6
   end
   finish(x, y)
 end
@@ -1184,21 +1449,23 @@ local function shopItemCard(dl, x, y, cw, item)
   local col = item.kind == "crate" and RC(item.rarity) or (item.kind == "pass" and SELECTED or RC(3))
   if item.kind == "crate" then D.crate(dl, x + 32, y + 34, 38, col)
   else icon(dl, item.icon, x + 32, y + 32, 17, item.kind == "pass" and CONTROL or col) end
-  dtext(dl, FONT.bold, 15, x + 62, y + 12, TEXT, item.name)
+  local name, cutName = clipLine(FONT.bold, 15, item.name, cw - 74)
+  dtext(dl, FONT.bold, 15, x + 62, y + 12, TEXT, name)
   local owned = item.kind == "pass" and (st.inv.passes[item.id] or 0)
              or (item.kind == "token" and (st.inv.tokens[item.token] or 0))
              or (st.inv.crates[item.rarity] or 0)
   dtext(dl, FONT.body, 11, x + 62, y + 32, DIM, "you have " .. owned)
-  wrapText(dl, FONT.body, 12, x + 12, y + 56, cw - 24, DIM, item.desc, 2)
+  local _, cut = wrapText(dl, FONT.body, 12, x + 12, y + 54, cw - 24, DIM, item.desc, 2)
+  if (cut or cutName) and mouseIn(x, y, x + cw, y + 86) then ImGui.SetTooltip(ctx, item.name .. "\n" .. item.desc) end
   ImGui.PushID(ctx, item.id)
-  ImGui.SetCursorScreenPos(ctx, x + 12, y + ch - 32)
-  if sure("buy" .. item.id, fmtNum(item.price) .. " coins", cw - 24, not afford) then
+  at(x + 12, y + ch - 40)
+  if sure("buy" .. item.id, "Buy for " .. fmtNum(item.price) .. " Coins", cw - 24, not afford, "Buy") then
     G.buy(st, ss, item.id)
     saveSoon()
   end
   if not afford then
-    tip(string.format("You have %d%% of the coins for this", math.floor(st.coins / item.price * 100)))
-    D.bar(dl, x + 12, y + ch - 6, cw - 24, 3, st.coins / item.price, COIN)
+    tip(string.format("You have %d%% of the coins for this.", math.floor(st.coins / item.price * 100)))
+    D.bar(dl, x + 12, y + ch - 7, cw - 24, 3, st.coins / item.price, COIN)
   end
   ImGui.PopID(ctx)
 end
@@ -1209,24 +1476,32 @@ local function pageShop()
   y = sectionTitle(dl, x, y, "Daily deals", "new deals in " .. fmtDur(G.secsToNextDay(ui.epoch)))
   local cols = math.max(1, math.min(3, math.floor((w + 12) / 220)))
   local cw = (w - (cols - 1) * 12) / cols
+  local cardH, rowH = 214, 214 + 8 + 28 + 16
   for i, deal in ipairs(st.shop.deals) do
     local c = (i - 1) % cols
     local cx = x + c * (cw + 12)
-    local cy = y + math.floor((i - 1) / cols) * 262
-    dropCard(dl, cx, cy, cw, 214, deal.drop, ui.tp, 1)
-    if deal.drop.type == "gear" and ImGui.IsWindowHovered(ctx) and mouseIn(cx, cy, cx + cw, cy + 214) then
-      ImGui.SetTooltip(ctx, table.concat(gearLines(deal.drop, st.gear.equipped[deal.drop.slot]), "\n"))
+    local cy = y + math.floor((i - 1) / cols) * rowH
+    local cut = dropCard(dl, cx, cy, cw, cardH, deal.drop, ui.tp, 1)
+    if mouseIn(cx, cy, cx + cw, cy + cardH) then
+      if deal.drop.type == "gear" then
+        ImGui.SetTooltip(ctx, table.concat(gearLines(deal.drop, st.gear.equipped[deal.drop.slot]), "\n"))
+      elseif cut then ImGui.SetTooltip(ctx, cardWhole(deal.drop)) end
     end
     ImGui.PushID(ctx, "deal" .. i)
-    ImGui.SetCursorScreenPos(ctx, cx, cy + 220)
-    if deal.bought then dim("  Sold out - see you tomorrow")
-    elseif sure("deal" .. i, fmtNum(deal.price) .. " coins", cw, st.coins < deal.price) then
-      G.buyDeal(st, ss, i)
-      saveSoon()
+    if deal.bought then
+      dtext(dl, FONT.body, 13, cx + 4, cy + cardH + 14, DIM, "Sold out - new deals tomorrow")
+    else
+      at(cx, cy + cardH + 8)
+      if sure("deal" .. i, "Buy for " .. fmtNum(deal.price) .. " Coins", cw, st.coins < deal.price, "Buy") then
+        G.buyDeal(st, ss, i)
+        saveSoon()
+      end
+      if deal.drop.type == "gear" then tip(table.concat(gearLines(deal.drop, st.gear.equipped[deal.drop.slot]), "\n"))
+      else tip(cardWhole(deal.drop)) end
     end
     ImGui.PopID(ctx)
   end
-  y = y + math.ceil(#st.shop.deals / cols) * 262 + 6
+  y = y + math.ceil(#st.shop.deals / cols) * rowH + 6
 
   for _, group in ipairs({ { "pass", "Passes", "permission slips - redeem them from Loot when the time comes" },
                            { "token", "Tokens" }, { "crate", "Crates" } }) do
@@ -1251,39 +1526,44 @@ end
 local function gearTile(dl, x, y, s, item, selected)
   local col = RC(item.rarity)
   D.rect(dl, x, y, x + s, y + s, SUNKEN, 6)
-  ImGui.DrawList_AddRectFilledMultiColor(dl, x, y, x + s, y + s, A(col, 0.0), A(col, 0.0), A(col, 0.3), A(col, 0.3))
+  D.shade4(dl, x, y, x + s, y + s, A(col, 0.0), A(col, 0.0), A(col, 0.3), A(col, 0.3))
   D.frame(dl, x, y, x + s, y + s, col, 6, item.rarity >= L.EPIC and 2 or 1.2)
-  if selected then D.glow(dl, x, y, x + s, y + s, SELECTED, 6, 1) end
+  if selected then
+    -- Chosen: a glow, and a tick, not the colour alone.
+    D.glow(dl, x, y, x + s, y + s, SELECTED, 6, 1)
+    D.circle(dl, x + 9, y + 9, 7, SELECTED)
+    D.check(dl, x + 9, y + 9, 7, INK)
+  end
   icon(dl, item.icon, x + s / 2, y + s / 2, s * 0.28, col)
-  if item.power then D.star(dl, x + s - 9, y + 9, 5, RC(6), ui.tp) end
+  if item.power then D.star(dl, x + s - 9, y + 9, 5, RC(6), ui.calm and 0 or ui.tp) end
 end
 
 local function pageGear()
   local dl = ImGui.GetWindowDrawList(ctx)
   local x, y, w = area()
   y = sectionTitle(dl, x, y, "Equipped", "gear score " .. G.gearScore(st))
-  local cols = (w >= 560) and 3 or 2
-  local sw = (math.min(w, 760) - (cols - 1) * 10) / cols
+  local cols = (w >= 600) and 3 or ((w >= 380) and 2 or 1)
+  local sw = (math.min(w, 780) - (cols - 1) * 12) / cols
   for i, slot in ipairs(L.SLOTS) do
     local c = (i - 1) % cols
-    local sx, sy = x + c * (sw + 10), y + math.floor((i - 1) / cols) * 74
+    local sx, sy = x + c * (sw + 12), y + math.floor((i - 1) / cols) * 78
     local item = st.gear.equipped[slot.id]
     panel(dl, sx, sy, sw, 66)
-    ImGui.SetCursorScreenPos(ctx, sx, sy)
-    ImGui.InvisibleButton(ctx, "slot" .. slot.id, sw, 66)
+    hit("slot" .. slot.id, sx, sy, sw, 66)
     if item then
       gearTile(dl, sx + 6, sy + 6, 54, item, ui.selected == item.uid)
       dtext(dl, FONT.body, 11, sx + 68, sy + 8, DIM, slot.name:upper())
       wrapText(dl, FONT.bold, 14, sx + 68, sy + 24, sw - 76, RT(item.rarity), item.name, 2, 1)
-      if ImGui.IsItemHovered(ctx) then ImGui.SetTooltip(ctx, table.concat(gearLines(item), "\n")) end
+      tip(table.concat(gearLines(item), "\n"))
     else
-      D.frame(dl, sx + 6, sy + 6, sx + 60, sy + 60, RULE, 6, 1)
-      icon(dl, slot.icon, sx + 33, sy + 33, 13, RULE)
+      D.frame(dl, sx + 6, sy + 6, sx + 60, sy + 60, MARK, 6, 1)
+      icon(dl, slot.icon, sx + 33, sy + 33, 13, MARK)
       dtext(dl, FONT.body, 11, sx + 68, sy + 8, DIM, slot.name:upper())
       dtext(dl, FONT.body, 13, sx + 68, sy + 26, DIM, "empty")
+      tip(slot.name .. ": nothing equipped yet.")
     end
   end
-  y = y + math.ceil(#L.SLOTS / cols) * 74 + 6
+  y = y + math.ceil(#L.SLOTS / cols) * 78 + 6
 
   -- What it all adds up to.
   local sums = {}
@@ -1295,67 +1575,72 @@ local function pageGear()
   if #sums > 0 then
     y = sectionTitle(dl, x, y, "Your bonuses")
     for _, line in ipairs(sums) do
-      dtext(dl, FONT.body, 13, x + 6, y, TEXT, line)
-      y = y + 19
+      y = y + wrapText(dl, FONT.body, 13, x + 6, y, w - 6, TEXT, line) + 3
     end
     y = y + 8
   end
 
-  -- The stash.
+  -- The stash: a tile is a button, so Tab reaches each one and its tooltip
+  -- says what it is.
   y = sectionTitle(dl, x, y, "Stash", #st.gear.stash .. " / " .. G.STASH_MAX .. "  /  click an item to look at it")
   local s = 54
-  local per = math.max(1, math.floor((w + 6) / (s + 6)))
+  local per = math.max(1, math.floor((w + 12) / (s + 12)))
   local selItem
   for i, item in ipairs(st.gear.stash) do
     local c = (i - 1) % per
-    local tx, ty = x + c * (s + 6), y + math.floor((i - 1) / per) * (s + 6)
-    ImGui.SetCursorScreenPos(ctx, tx, ty)
-    if ImGui.InvisibleButton(ctx, "stash" .. item.uid, s, s) then ui.selected = item.uid end
-    if ImGui.IsItemHovered(ctx) then
-      ImGui.SetTooltip(ctx, table.concat(gearLines(item, st.gear.equipped[item.slot]), "\n"))
-    end
+    local tx, ty = x + c * (s + 12), y + math.floor((i - 1) / per) * (s + 12)
+    if hit("stash" .. item.uid, tx, ty, s, s) then ui.selected = item.uid end
+    tip(table.concat(gearLines(item, st.gear.equipped[item.slot]), "\n"))
     gearTile(dl, tx, ty, s, item, ui.selected == item.uid)
     if ui.selected == item.uid then selItem = item end
   end
   if #st.gear.stash == 0 then
-    ImGui.SetCursorScreenPos(ctx, x, y)
-    dim("Nothing here yet. Gear drops from pass tiers, crates and the shop's daily deals.")
-    y = y + 24
+    y = y + wrapText(dl, FONT.body, 13, x, y, w, DIM, "Nothing here yet. Gear drops from pass tiers, crates and the shop's daily deals.") + 10
   else
-    y = y + math.ceil(#st.gear.stash / per) * (s + 6) + 8
+    y = y + math.ceil(#st.gear.stash / per) * (s + 12) + 4
   end
 
   if selItem then
     local lines = gearLines(selItem, st.gear.equipped[selItem.slot])
-    local ph = 30 + #lines * 18 + 40
+    local labels = { "Equip", "Salvage for " .. L.sellValue(selItem) .. " Coins" }
+    local spots, bh = flowRows(x + 12, 0, w - 24, { btnW(labels[1], 110), btnW(labels[2], 200) })
+    local textH = 0
+    for i = 2, #lines do textH = textH + #wrap(FONT.body, 13, lines[i], w - 24) * 18 end
+    local ph = 34 + textH + 12 + bh + 12
     panel(dl, x, y, w, ph)
     D.frame(dl, x, y, x + w, y + ph, RC(selItem.rarity), 6, 1.5)
     dtext(dl, FONT.bold, 16, x + 12, y + 10, RT(selItem.rarity), lines[1])
-    for i = 2, #lines do dtext(dl, FONT.body, 13, x + 12, y + 16 + i * 18, i == 2 and DIM or TEXT, lines[i]) end
+    local ly = y + 34
+    for i = 2, #lines do ly = ly + wrapText(dl, FONT.body, 13, x + 12, ly, w - 24, i == 2 and DIM or TEXT, lines[i], nil, 5) end
+    local by = y + ph - 12 - bh
     ImGui.PushID(ctx, "sel" .. selItem.uid)
-    if pickAt(x + 12, y + ph - 34, "Equip", true, 110) then
+    if pickAt(spots[1][1], by + spots[1][2], labels[1], true, 110) then
       G.equip(st, ss, selItem.uid)
       F.burst(fx, ui.lastClick[1], ui.lastClick[2], 30, { col = RC(selItem.rarity), speed = 260 })
       ui.selected = nil
       saveSoon()
     end
-    ImGui.SameLine(ctx)
-    if sure("salvage" .. selItem.uid, "Salvage for " .. L.sellValue(selItem) .. " coins", 200) then
+    at(spots[2][1], by + spots[2][2])
+    if sure("salvage" .. selItem.uid, labels[2], 200, false, "Salvage") then
       G.salvage(st, ss, selItem.uid)
       F.burst(fx, ui.lastClick[1], ui.lastClick[2], 20, { col = COIN, speed = 200 })
       ui.selected = nil
       saveSoon()
     end
     ImGui.PopID(ctx)
-    y = y + ph + 10
+    y = y + ph + 12
   end
 
   if #st.gear.stash > 0 then
-    ImGui.SetCursorScreenPos(ctx, x, y)
-    if sure("junk2", "Salvage all Poor and Common", 230) then G.salvageUpTo(st, ss, 2); saveSoon() end
-    ImGui.SameLine(ctx)
-    if sure("junk3", "...and Uncommon", 150) then G.salvageUpTo(st, ss, 3); saveSoon() end
-    y = y + 34
+    local labels = { "Salvage All Poor and Common", "Salvage Up to Uncommon" }
+    local spots, bh = flowRows(x, y, w, { btnW(labels[1], 230), btnW(labels[2], 200) })
+    at(spots[1][1], spots[1][2])
+    if sure("junk2", labels[1], 230, false, "Salvage") then G.salvageUpTo(st, ss, 2); saveSoon() end
+    tip("Sells every Poor and Common item in the stash for coins. Equipped gear is kept.")
+    at(spots[2][1], spots[2][2])
+    if sure("junk3", labels[2], 200, false, "Salvage") then G.salvageUpTo(st, ss, 3); saveSoon() end
+    tip("Sells every Poor, Common and Uncommon item in the stash for coins. Equipped gear is kept.")
+    y = y + bh + 12
   end
   finish(x, y)
 end
@@ -1364,32 +1649,54 @@ end
 -- Loot: crates, passes, tokens, cosmetics
 ------------------------------------------------------------------------------
 
+-- A row with an icon, a name, a line about it and a button at the right
+-- (or under it, when narrow). Returns its height with the gap after.
+local function itemRow(dl, x, y, w, drawIcon, title, desc, button)
+  local side = w >= 400
+  local bwid = button and btnW(button.label, 118) or 0
+  local textW = side and (w - 48 - bwid - 24) or (w - 60)
+  local lines = wrap(FONT.body, 12, desc, textW)
+  local h = math.max(52, 28 + #lines * 15 + 10)
+  if button and not side then h = h + 28 + 10 end
+  panel(dl, x, y, w, h)
+  drawIcon(x + 24, y + 24)
+  dtext(dl, FONT.bold, 15, x + 48, y + 7, TEXT, title)
+  for i, line in ipairs(lines) do dtext(dl, FONT.body, 12, x + 48, y + 27 + (i - 1) * 15, DIM, line) end
+  if button then
+    if side then at(x + w - 12 - bwid, y + (math.min(h, 52) - 28) / 2)
+    else at(x + 48, y + h - 38) end
+    button.draw(bwid)
+  end
+  return h + 8
+end
+
 local function pageLoot()
   local dl = ImGui.GetWindowDrawList(ctx)
   local x, y, w = area()
   y = sectionTitle(dl, x, y, "Loot crates", "from levelling up, pass tiers, quests and the shop")
-  local tw = 100
-  local per = math.max(1, math.floor((w + 8) / (tw + 8)))
+  local tw = 104
+  local per = math.max(1, math.floor((w + 12) / (tw + 12)))
   local shown = 0
   for r = 2, 7 do
     local n = st.inv.crates[r]
     local c = shown % per
-    local tx, ty = x + c * (tw + 8), y + math.floor(shown / per) * 140
+    local tx, ty = x + c * (tw + 12), y + math.floor(shown / per) * 148
     shown = shown + 1
-    panel(dl, tx, ty, tw, 132)
+    panel(dl, tx, ty, tw, 136)
     local bob = n > 0 and wave(ui.tp * 3 + r) * 3 or 0
-    if n > 0 then D.halo(dl, tx + tw / 2, ty + 42, 34, RC(r), 0.25) end
-    D.crate(dl, tx + tw / 2, ty + 40 + bob, 46, n > 0 and RC(r) or RULE, n > 0 and wave(ui.tp * 2 + r) * 0.04 or 0)
-    dtext(dl, FONT.body, 11, tx + tw / 2, ty + 74, RT(r), L.RARITY[r].name:upper(), "center")
-    dtext(dl, FONT.bold, 13, tx + tw / 2, ty + 88, n > 0 and TEXT or DIM, "x" .. n, "center")
+    if n > 0 then D.halo(dl, tx + tw / 2, ty + 38, 34, RC(r), 0.25) end
+    D.crate(dl, tx + tw / 2, ty + 36 + bob, 46, n > 0 and RC(r) or MARK, n > 0 and wave(ui.tp * 2 + r) * 0.04 or 0)
+    dtext(dl, FONT.body, 11, tx + tw / 2, ty + 64, RT(r), L.RARITY[r].name:upper(), "center")
+    dtext(dl, FONT.bold, 13, tx + tw / 2, ty + 78, n > 0 and TEXT or DIM, "x" .. n, "center")
     ImGui.PushID(ctx, "crate" .. r)
-    if pickAt(tx + 8, ty + 104, "Open", n > 0, tw - 16, n == 0) then
+    if pickAt(tx + 8, ty + 96, "Open", n > 0, tw - 16, n == 0) then
       G.openCrate(st, ss, r)
       saveSoon()
     end
+    tip(n > 0 and ("Open a " .. L.RARITY[r].name .. " Crate.") or ("No " .. L.RARITY[r].name .. " Crates yet."))
     ImGui.PopID(ctx)
   end
-  y = y + math.ceil(shown / per) * 140 + 6
+  y = y + math.ceil(shown / per) * 148 + 6
 
   -- Passes.
   y = sectionTitle(dl, x, y, "Passes", "permission slips you've bought")
@@ -1398,25 +1705,21 @@ local function pageLoot()
     local n = item.kind == "pass" and (st.inv.passes[item.id] or 0) or 0
     if n > 0 then
       any = true
-      panel(dl, x, y, w, 46)
-      icon(dl, item.icon, x + 24, y + 23, 13, CONTROL)
-      dtext(dl, FONT.bold, 15, x + 48, y + 6, TEXT, item.name .. "  x" .. n)
-      dtext(dl, FONT.body, 12, x + 48, y + 26, DIM, item.desc)
       ImGui.PushID(ctx, "redeem" .. item.id)
-      ImGui.SetCursorScreenPos(ctx, x + w - 130, y + 10)
-      if sure("redeem" .. item.id, "Redeem", 118) then
-        G.redeem(st, ss, item.id, ui.epoch)
-        saveSoon()
-      end
-      tip("Use it now: this is your permission.")
+      y = y + itemRow(dl, x, y, w, function(ix, iy) icon(dl, item.icon, ix, iy, 13, CONTROL) end,
+                      item.name .. "  x" .. n, item.desc,
+                      { label = "Redeem", draw = function(bwid)
+                          if sure("redeem" .. item.id, "Redeem", bwid, false, "Redeem") then
+                            G.redeem(st, ss, item.id, ui.epoch)
+                            saveSoon()
+                          end
+                          if ui.confirm.id ~= "redeem" .. item.id then tip("Use it now: this is your permission.") end
+                        end })
       ImGui.PopID(ctx)
-      y = y + 52
     end
   end
   if not any then
-    ImGui.SetCursorScreenPos(ctx, x, y)
-    dim("None yet. Buy passes in the Shop - a takeaway, a movie, a gaming session.")
-    y = y + 26
+    y = y + wrapText(dl, FONT.body, 13, x, y, w, DIM, "None yet. Buy passes in the Shop - a takeaway, a movie, a gaming session.") + 10
   end
   y = y + 6
 
@@ -1425,72 +1728,63 @@ local function pageLoot()
   for _, id in ipairs({ "reroll", "freeze", "boost" }) do
     local tk = L.TOKENS[id]
     local n = st.inv.tokens[id] or 0
-    panel(dl, x, y, w, 46)
-    icon(dl, tk.icon, x + 24, y + 23, 12, RC(3))
-    dtext(dl, FONT.bold, 15, x + 48, y + 6, TEXT, tk.name .. "  x" .. n)
     local how = (id == "reroll") and "Use it on a quest on the Quests page"
              or ((id == "freeze") and "Used by itself when you miss a day" or tk.text)
-    dtext(dl, FONT.body, 12, x + 48, y + 26, DIM, how)
-    if id == "boost" then
-      ImGui.SetCursorScreenPos(ctx, x + w - 130, y + 10)
-      if pick("Activate", n > 0, 118, n == 0) then G.useBoost(st, ss); F.flash(fx, 0.25, SELECTED); saveSoon() end
-    end
-    y = y + 52
+    local button = (id == "boost") and { label = "Activate", draw = function(bwid)
+      if pick("Activate", n > 0, bwid, n == 0) then G.useBoost(st, ss); F.flash(fx, 0.25, SELECTED); saveSoon() end
+    end } or nil
+    y = y + itemRow(dl, x, y, w, function(ix, iy) icon(dl, tk.icon, ix, iy, 12, RC(3)) end, tk.name .. "  x" .. n, how, button)
   end
   y = y + 6
 
   -- Cosmetics: titles and banners.
   y = sectionTitle(dl, x, y, "Titles", "shown beside your name")
-  ImGui.SetCursorScreenPos(ctx, x, y)
-  local avail = w
-  local rowX = 0
-  if pick("None", st.profile.title == 0, 0) then st.profile.title = 0; saveSoon() end
-  rowX = rowX + measure(FONT.body, 14, "None") + 26
-  for i, tt in ipairs(st.cos.titles) do
-    local tw2 = measure(FONT.body, 14, tt.text) + 26
-    if rowX + tw2 < avail then ImGui.SameLine(ctx) else rowX = 0 end
-    rowX = rowX + tw2 + 8
+  local labels, widths = { "None" }, { btnW("None") }
+  for i, tt in ipairs(st.cos.titles) do labels[i + 1] = tt.text; widths[i + 1] = btnW(tt.text) end
+  local spots, th = flowRows(x, y, w, widths)
+  for i, label in ipairs(labels) do
     ImGui.PushID(ctx, "title" .. i)
-    if pick(tt.text, st.profile.title == i, 0) then st.profile.title = i; saveSoon() end
-    tip(L.RARITY[tt.rarity].name .. " title")
+    if pickAt(spots[i][1], spots[i][2], label, st.profile.title == i - 1) then st.profile.title = i - 1; saveSoon() end
+    if i > 1 then tip(L.RARITY[st.cos.titles[i - 1].rarity].name .. " title") end
     ImGui.PopID(ctx)
   end
-  local _, cy = ImGui.GetCursorScreenPos(ctx)
-  y = cy + 10
+  y = y + th + 16
 
   y = sectionTitle(dl, x, y, "Banners", "click one to wear it")
   local bs = 64
-  local bper = math.max(1, math.floor((w + 8) / (bs + 8)))
+  local bper = math.max(1, math.floor((w + 12) / (bs + 12)))
   for i, b in ipairs(st.cos.banners) do
     local c = (i - 1) % bper
-    local bx, by = x + c * (bs + 8), y + math.floor((i - 1) / bper) * (bs + 22)
+    local bx, by = x + c * (bs + 12), y + math.floor((i - 1) / bper) * (bs + 26)
+    local wearing = st.profile.banner == i
     panel(dl, bx, by, bs, bs)
-    if st.profile.banner == i then D.glow(dl, bx, by, bx + bs, by + bs, SELECTED, 6, 1) end
+    if wearing then D.glow(dl, bx, by, bx + bs, by + bs, SELECTED, 6, 1) end
     drawBanner(dl, bx + bs / 2, by + bs / 2, bs * 0.34, b.data, ui.tp)
-    ImGui.SetCursorScreenPos(ctx, bx, by)
-    if ImGui.InvisibleButton(ctx, "banner" .. i, bs, bs) then
-      st.profile.banner = (st.profile.banner == i) and 0 or i
+    if wearing then
+      -- Worn: a tick as well as the glow.
+      D.circle(dl, bx + bs - 9, by + 9, 8, SELECTED)
+      D.check(dl, bx + bs - 9, by + 9, 8, INK)
+    end
+    if hit("banner" .. i, bx, by, bs, bs) then
+      st.profile.banner = wearing and 0 or i
       saveSoon()
     end
-    tip(b.text .. " (" .. L.RARITY[b.rarity].name .. ")")
+    tip(b.text .. " (" .. L.RARITY[b.rarity].name .. ")" .. (wearing and " - wearing it; click to take it off" or ""))
     local nm = b.text
     if measure(FONT.body, 11, nm) > bs + 6 then nm = nm:match("^(%S+)") or nm end
     dtext(dl, FONT.body, 11, bx + bs / 2, by + bs + 3, RT(b.rarity), nm, "center")
   end
   if #st.cos.banners == 0 then
-    ImGui.SetCursorScreenPos(ctx, x, y)
-    dim("No banners yet. They drop from tiers and crates.")
-    y = y + 24
+    y = y + wrapText(dl, FONT.body, 13, x, y, w, DIM, "No banners yet. They drop from tiers and crates.") + 10
   else
-    y = y + math.ceil(#st.cos.banners / bper) * (bs + 22) + 6
+    y = y + math.ceil(#st.cos.banners / bper) * (bs + 26) + 6
   end
 
   if #st.log > 0 then
     y = sectionTitle(dl, x, y, "Treats you've had")
     for i = 1, math.min(8, #st.log) do
       local e = st.log[i]
-      dtext(dl, FONT.body, 13, x + 6, y, TEXT, os.date("%a %d %b", e.t) .. "  -  " .. e.name)
-      y = y + 19
+      y = y + wrapText(dl, FONT.body, 13, x + 6, y, w - 6, TEXT, os.date("%a %d %b", e.t) .. "  -  " .. e.name) + 3
     end
   end
   finish(x, y)
@@ -1519,14 +1813,29 @@ end
 local FILTERS = { { "all", "All" }, { "fav", "Starred" } }
 for _, d in ipairs(L.IDEAS) do FILTERS[#FILTERS + 1] = { d.id, d.label } end
 
+-- An idea's buttons, in the order they are drawn: Star, Copy, then what it
+-- can put into the project, then Delete.
+local function ideaButtons(v)
+  local list = { { v.fav and "Starred" or "Star", 80 }, { "Copy", 70 } }
+  if v.data and v.data.block then list[#list + 1] = { "Insert MIDI", 110 } end
+  if v.data and v.data.sections then list[#list + 1] = { "Add Regions", 110 } end
+  if v.data and v.data.bpm then list[#list + 1] = { "Set Tempo to " .. v.data.bpm, 0 } end
+  list[#list + 1] = { "Delete", 70 }
+  return list
+end
+
 local function ideaCard(dl, x, y, w, v, visible)
   local textW = w - 28
   local mainLines = wrap(FONT.bold, 16, v.text, textW)
   local subLines = (v.sub ~= "") and wrap(FONT.body, 12, v.sub, textW) or {}
-  local h = 36 + #mainLines * 20 + #subLines * 16 + 44
+  local buttons = ideaButtons(v)
+  local widths = {}
+  for i, b in ipairs(buttons) do widths[i] = btnW(b[1], b[2]) end
+  local spots, bh = flowRows(x + 14, 0, w - 28, widths)
   local drums = v.data and v.data.drums
+  local h = 32 + #mainLines * 20 + 2 + #subLines * 16 + 4 + 12 + bh + 12
   if drums then h = h + #drums.rows * 12 + 8 end
-  if not visible(y, h) then return h + 8 end
+  if not visible(y, h) then return h + 12 end
   local col = RC(v.rarity)
   panel(dl, x, y, w, h)
   D.rect(dl, x, y, x + 4, y + h, col, 2)
@@ -1540,76 +1849,75 @@ local function ideaCard(dl, x, y, w, v, visible)
   ty = ty + #subLines * 16 + 4
   if drums then ty = ty + drumGrid(dl, x + 14, ty, w - 28, drums) + 6 end
 
+  local by = y + h - 12 - bh
   ImGui.PushID(ctx, "idea" .. v.uid)
-  ImGui.SetCursorScreenPos(ctx, x + 14, y + h - 34)
-  if pick(v.fav and "Starred" or "Star", v.fav, 80) then v.fav = not v.fav; saveSoon() end
-  tip("Starred ideas are never cleared out of the vault")
-  ImGui.SameLine(ctx)
-  if pick("Copy", false, 70) then
-    local text = v.name .. ": " .. v.text .. (v.sub ~= "" and ("\n" .. v.sub) or "")
-    if v.data and v.data.text then text = text .. "\n" .. v.data.text end
-    ImGui.SetClipboardText(ctx, text)
-    F.toast(fx, { text = "Copied", sub = v.text, icon = "scroll", rarity = 2 })
-  end
-  if v.data and v.data.block then
-    ImGui.SameLine(ctx)
-    if pick("Insert MIDI", false, 110) then
-      local res, made = W.insert(v.data.block)
-      if res == W.OK then
+  for i, b in ipairs(buttons) do
+    local bx, byy = spots[i][1], by + spots[i][2]
+    local label = b[1]
+    if label == "Star" or label == "Starred" then
+      if pickAt(bx, byy, label, v.fav, b[2]) then v.fav = not v.fav; saveSoon() end
+      tip("Starred ideas are never cleared out of the vault.")
+    elseif label == "Copy" then
+      if pickAt(bx, byy, label, false, b[2]) then
+        local text = v.name .. ": " .. v.text .. (v.sub ~= "" and ("\n" .. v.sub) or "")
+        if v.data and v.data.text then text = text .. "\n" .. v.data.text end
+        ImGui.SetClipboardText(ctx, text)
+        F.toast(fx, { text = "Copied", sub = v.text, icon = "scroll", rarity = 2 })
+      end
+      tip("Copies the idea as text, to paste anywhere.")
+    elseif label == "Insert MIDI" then
+      if pickAt(bx, byy, label, false, b[2]) then
+        local res, made = W.insert(v.data.block)
+        if res == W.OK then
+          G.ideaUsed(st, ss, v.uid)
+          F.toast(fx, { text = "In your project", sub = made and "On a new track at the edit cursor" or "On the selected track at the edit cursor", icon = "note", rarity = v.rarity })
+          saveSoon()
+        end
+      end
+      tip("Puts it on the selected track at the edit cursor (or a new track if none is selected).")
+    elseif label == "Add Regions" then
+      if pickAt(bx, byy, label, false, b[2]) then
+        if W.addRegions(v.data.sections) == W.OK then
+          G.ideaUsed(st, ss, v.uid)
+          F.toast(fx, { text = "Regions added", sub = "From the edit cursor", icon = "blocks", rarity = v.rarity })
+          saveSoon()
+        end
+      end
+      tip("Lays the sections out as regions from the edit cursor.")
+    elseif label == "Delete" then
+      at(bx, byy)
+      if sure("del" .. v.uid, label, b[2], false, "Delete") then G.removeIdea(st, v.uid); saveSoon() end
+      if ui.confirm.id ~= "del" .. v.uid then tip("Takes the idea out of the vault. It can't be brought back.") end
+    else
+      if pickAt(bx, byy, label, false, b[2]) then
+        W.setTempo(v.data.bpm)
         G.ideaUsed(st, ss, v.uid)
-        F.toast(fx, { text = "In your project", sub = made and "On a new track at the edit cursor" or "On the selected track at the edit cursor", icon = "note", rarity = v.rarity })
         saveSoon()
       end
-    end
-    tip("Puts it on the selected track at the edit cursor (or a new track if none is selected)")
-  end
-  if v.data and v.data.sections then
-    ImGui.SameLine(ctx)
-    if pick("Add regions", false, 110) then
-      if W.addRegions(v.data.sections) == W.OK then
-        G.ideaUsed(st, ss, v.uid)
-        F.toast(fx, { text = "Regions added", sub = "From the edit cursor", icon = "blocks", rarity = v.rarity })
-        saveSoon()
-      end
-    end
-    tip("Lays the sections out as regions from the edit cursor")
-  end
-  if v.data and v.data.bpm then
-    ImGui.SameLine(ctx)
-    if pick("Set tempo " .. v.data.bpm, false, 0) then
-      W.setTempo(v.data.bpm)
-      G.ideaUsed(st, ss, v.uid)
-      saveSoon()
+      tip("Sets the project's tempo to " .. v.data.bpm .. " BPM (REAPER's Undo puts it back).")
     end
   end
-  ImGui.SameLine(ctx)
-  if sure("del" .. v.uid, "Delete", 70) then G.removeIdea(st, v.uid); saveSoon() end
   ImGui.PopID(ctx)
-  return h + 8
+  return h + 12
 end
 
 local function pageIdeas()
   local dl = ImGui.GetWindowDrawList(ctx)
   local x, y, w = area()
   y = sectionTitle(dl, x, y, "Idea vault", #st.vault .. " ideas  /  newest first")
-  ImGui.SetCursorScreenPos(ctx, x, y)
-  local rowX = 0
+  local widths = {}
+  for i, f in ipairs(FILTERS) do widths[i] = btnW(f[2]) end
+  local spots, fh = flowRows(x, y, w, widths)
   for i, f in ipairs(FILTERS) do
-    local bw = measure(FONT.body, 14, f[2]) + 18
-    if i > 1 then
-      if rowX + bw < w then ImGui.SameLine(ctx) else rowX = 0 end
-    end
-    rowX = rowX + bw + 8
     ImGui.PushID(ctx, "filter" .. i)
-    if pick(f[2], ui.filter == f[1], 0) then ui.filter = f[1] end
+    if pickAt(spots[i][1], spots[i][2], f[2], ui.filter == f[1]) then ui.filter = f[1] end
     ImGui.PopID(ctx)
   end
-  local _, cy = ImGui.GetCursorScreenPos(ctx)
-  y = cy + 8
+  y = y + fh + 16
   -- Only the cards in view are drawn; the rest only take up room.
   local _, wy = ImGui.GetWindowPos(ctx)
   local _, wh = ImGui.GetWindowSize(ctx)
-  local function visible(top, h) return top + h >= wy and top <= wy + wh end
+  local function visible(top, h) return Y(top + h) >= wy and Y(top) <= wy + wh end
   local n = 0
   for i = #st.vault, 1, -1 do
     local v = st.vault[i]
@@ -1619,9 +1927,7 @@ local function pageIdeas()
     end
   end
   if n == 0 then
-    ImGui.SetCursorScreenPos(ctx, x, y)
-    dim("No ideas here yet. They drop from pass tiers and crates - keep making music.")
-    y = y + 24
+    y = y + wrapText(dl, FONT.body, 13, x, y, w, DIM, "No ideas here yet. They drop from pass tiers and crates - keep making music.") + 10
   end
   finish(x, y)
 end
@@ -1637,35 +1943,54 @@ local function pageTrophies()
   y = sectionTitle(dl, x, y, "Achievements", have .. " of " .. all .. " unlocked")
   D.bar(dl, x, y, w, 8, have / all, RC(6))
   y = y + 18
-  local cols = math.max(1, math.floor((w + 10) / 280))
-  local cw = (w - (cols - 1) * 10) / cols
+  local cols = math.max(1, math.floor((w + 12) / 280))
+  local cw = (w - (cols - 1) * 12) / cols
   for i, a in ipairs(G.ACHIEVEMENTS) do
     local c = (i - 1) % cols
-    local ax, ay = x + c * (cw + 10), y + math.floor((i - 1) / cols) * 100
+    local ax, ay = x + c * (cw + 12), y + math.floor((i - 1) / cols) * 104
     local got = st.ach[a.id] or 0
     local done = got == #a.goals
     panel(dl, ax, ay, cw, 92, done and GROUND or SUNKEN)
     if done then D.frame(dl, ax, ay, ax + cw, ay + 92, RC(6), 6, 2) end
-    icon(dl, "trophy", ax + 24, ay + 26, 13, got > 0 and (done and RC(6) or RC(math.min(7, 2 + got))) or RULE)
+    icon(dl, "trophy", ax + 24, ay + 26, 13, got > 0 and (done and RC(6) or RC(math.min(7, 2 + got))) or MARK)
     dtext(dl, FONT.bold, 14, ax + 46, ay + 10, TEXT, a.name .. (got > 0 and (" " .. G.roman(got)) or ""))
     local nextGoal = a.goals[math.min(#a.goals, got + 1)]
     local v = a.value(st)
     local line = done and ("All done. Title earned: " .. a.title) or string.format(a.fmt, G.fmtGoal(nextGoal))
-    wrapText(dl, FONT.body, 12, ax + 46, ay + 30, cw - 56, DIM, line, 2)
+    local _, cut = wrapText(dl, FONT.body, 12, ax + 46, ay + 30, cw - 56, DIM, line, 2)
+    if cut and mouseIn(ax, ay, ax + cw, ay + 92) then ImGui.SetTooltip(ctx, a.name .. ": " .. line) end
     local prev = got > 0 and a.goals[got] or 0
     local frac = done and 1 or math.max(0, (v - prev) / (nextGoal - prev))
-    D.bar(dl, ax + 46, ay + 66, cw - 120, 7, frac, done and RC(6) or XP_COL)
-    dtext(dl, FONT.body, 11, ax + cw - 10, ay + 63, DIM,
-          (v >= 100 and fmtNum(v) or string.format("%.1f", v)):gsub("%.0$", "") .. " / " .. G.fmtGoal(nextGoal), "right")
-    for p = 1, #a.goals do D.circle(dl, ax + 46 + (p - 1) * 9, ay + 82, 3, p <= got and RC(math.min(7, 1 + p)) or RULE) end
+    local count = (v >= 100 and fmtNum(v) or string.format("%.1f", v)):gsub("%.0$", "") .. " / " .. G.fmtGoal(nextGoal)
+    local countW = measure(FONT.body, 11, count)
+    D.bar(dl, ax + 46, ay + 66, math.max(30, cw - 56 - countW - 12), 7, frac, done and RC(6) or XP_COL)
+    dtext(dl, FONT.body, 11, ax + cw - 10, ay + 63, DIM, count, "right")
+    -- One pip per tier: reached ones filled, the rest outlined.
+    for p = 1, #a.goals do
+      local ppx = ax + 46 + (p - 1) * 10
+      if p <= got then D.circle(dl, ppx, ay + 82, 3.5, RC(math.min(7, 1 + p)))
+      else D.ring(dl, ppx, ay + 82, 3, MARK, 1.2) end
+    end
   end
-  y = y + math.ceil(#G.ACHIEVEMENTS / cols) * 100
+  y = y + math.ceil(#G.ACHIEVEMENTS / cols) * 104
   finish(x, y)
 end
 
 ------------------------------------------------------------------------------
 -- Stats and settings
 ------------------------------------------------------------------------------
+
+-- What the battle pass looks at, and where it keeps it, in plain words
+-- (Apple's Privacy page: say what is read and why, keep it on the device).
+local PRIVACY = {
+  "To tell whether you're working, it notices that something happened in REAPER - " ..
+  "an edit, playback, the edit cursor moving or the mouse moving. With js_ReaScriptAPI " ..
+  "it also notices that a key was pressed while REAPER is in front. It never records " ..
+  "which keys, what you type or where you point.",
+  "For quests and stats it counts the tracks, items, MIDI notes, takes and markers you " ..
+  "add, and remembers the names of your projects and plugins.",
+  "All of it stays in one file on this computer. Nothing is sent anywhere.",
+}
 
 local function pageStats()
   local dl = ImGui.GetWindowDrawList(ctx)
@@ -1682,18 +2007,19 @@ local function pageStats()
     { "Plugins discovered", fmtNum(plugCount) }, { "Treats redeemed", fmtNum(s.redeemed) },
   }
   y = sectionTitle(dl, x, y, "All time")
-  local cols = math.max(2, math.floor((w + 10) / 190))
-  local cw = (w - (cols - 1) * 10) / cols
+  local cols = math.max(1, math.floor((w + 12) / 190))
+  local cw = (w - (cols - 1) * 12) / cols
   for i, n in ipairs(numbers) do
     local c = (i - 1) % cols
-    local nx, ny = x + c * (cw + 10), y + math.floor((i - 1) / cols) * 58
+    local nx, ny = x + c * (cw + 12), y + math.floor((i - 1) / cols) * 62
     panel(dl, nx, ny, cw, 50)
     dtext(dl, FONT.body, 11, nx + 10, ny + 7, DIM, n[1]:upper())
     dtext(dl, FONT.bold, 18, nx + 10, ny + 22, TEXT, n[2])
   end
-  y = y + math.ceil(#numbers / cols) * 58 + 8
+  y = y + math.ceil(#numbers / cols) * 62 + 8
 
-  -- The last fortnight, bars growing in when the page opens.
+  -- The last fortnight, bars growing in when the page opens. Today's bar is
+  -- yellow, and its day is written TODAY, so it is not told by colour alone.
   y = sectionTitle(dl, x, y, "The last 14 days", "minutes of active music-making")
   local chartH = 120
   panel(dl, x, y, w, chartH + 30, DEEP)
@@ -1705,13 +2031,14 @@ local function pageStats()
     most = math.max(most, st.days[k] or 0)
   end
   local grow = settle(F.ease.outCubic, (ui.tp - (ui.tabT or 0)) / 0.8)
-  local bw = (w - 20) / 14
+  local colW = (w - 20) / 14
   for i, d in ipairs(days) do
     local bh = (d.v / most) * (chartH - 20) * grow
-    local bx = x + 10 + (i - 1) * bw
-    D.rect(dl, bx + 3, y + chartH - bh, bx + bw - 3, y + chartH, i == 14 and SELECTED or XP_COL, 3)
-    if d.v > 0 then dtext(dl, FONT.body, 10, bx + bw / 2, y + chartH - bh - 13, DIM, tostring(math.floor(d.v / 60)), "center") end
-    dtext(dl, FONT.body, 10, bx + bw / 2, y + chartH + 8, DIM, d.k:sub(9, 10), "center")
+    local bx = x + 10 + (i - 1) * colW
+    D.rect(dl, bx + 3, y + chartH - bh, bx + colW - 3, y + chartH, i == 14 and SELECTED or XP_COL, 3)
+    if d.v > 0 then dtext(dl, FONT.body, 10, bx + colW / 2, y + chartH - bh - 13, DIM, tostring(math.floor(d.v / 60)), "center") end
+    if i == 14 then dtext(dl, FONT.bold, 10, bx + colW / 2, y + chartH + 8, TEXT, colW >= 34 and "TODAY" or "NOW", "center")
+    else dtext(dl, FONT.body, 10, bx + colW / 2, y + chartH + 8, DIM, d.k:sub(9, 10), "center") end
   end
   y = y + chartH + 42
 
@@ -1722,65 +2049,83 @@ local function pageStats()
     while #list > n do table.remove(list) end
     return list
   end
+  -- A ranked list: names cut short with the whole on hover.
+  local function ranked(lx, ly, lw, list, col, value)
+    for _, p in ipairs(list) do
+      local v = value(p[2])
+      local vw = measure(FONT.body, 12, v)
+      local name, cut = clipLine(FONT.body, 13, p[1], lw - 10 - vw - 12)
+      D.bar(dl, lx, ly + 16, lw - 10, 5, p[2] / math.max(1, list[1][2]), col)
+      dtext(dl, FONT.body, 13, lx, ly, TEXT, name)
+      dtext(dl, FONT.body, 12, lx + lw - 10, ly, DIM, v, "right")
+      if cut and mouseIn(lx, ly - 2, lx + lw, ly + 22) then ImGui.SetTooltip(ctx, p[1]) end
+      ly = ly + 28
+    end
+    return ly
+  end
   local half = (w >= 640) and (w - 12) / 2 or w
   local yTop = y
   y = sectionTitle(dl, x, y, "Most-worked projects")
-  local tp = top(st.projects, 6)
-  for _, p in ipairs(tp) do
-    D.bar(dl, x, y + 16, half - 10, 5, p[2] / math.max(1, tp[1][2]), PASS_COL)
-    dtext(dl, FONT.body, 13, x, y, TEXT, p[1])
-    dtext(dl, FONT.body, 12, x + half - 10, y, DIM, fmtDur(p[2]), "right")
-    y = y + 28
-  end
-  local px = (half < w) and (x + half + 12) or x
-  local py = (half < w) and yTop or (y + 10)
-  py = sectionTitle(dl, px, py, "Most-used plugins")
-  local tpl = top(st.plugins, 6)
-  for _, p in ipairs(tpl) do
-    D.bar(dl, px, py + 16, half - 10, 5, p[2] / math.max(1, tpl[1][2]), RC(5))
-    dtext(dl, FONT.body, 13, px, py, TEXT, p[1])
-    dtext(dl, FONT.body, 12, px + half - 10, py, DIM, tostring(p[2]), "right")
-    py = py + 28
-  end
-  y = math.max(y, py) + 12
+  y = ranked(x, y, half, top(st.projects, 6), PASS_COL, fmtDur)
+  local lx = (half < w) and (x + half + 12) or x
+  local ly = (half < w) and yTop or (y + 10)
+  ly = sectionTitle(dl, lx, ly, "Most-used plugins")
+  ly = ranked(lx, ly, half, top(st.plugins, 6), RC(5), tostring)
+  y = math.max(y, ly) + 12
 
-  -- Settings.
+  -- What it watches.
+  y = sectionTitle(dl, x, y, "What the battle pass watches")
+  for _, para in ipairs(PRIVACY) do y = y + wrapText(dl, FONT.body, 13, x, y, math.min(w, 640), DIM, para, nil, 5) + 8 end
+  y = y + wrapText(dl, FONT.body, 13, x, y, math.min(w, 640), DIM, "The file: " .. W.savePath(), nil, 5) + 16
+
+  -- Settings. Boxes to type in, sliders and ticks wear a border 3:1 on the
+  -- ground, so they can be found without colour.
   y = sectionTitle(dl, x, y, "Settings")
-  ImGui.SetCursorScreenPos(ctx, x, y)
-  ImGui.SetNextItemWidth(ctx, 220)
+  at(x, y)
+  ImGui.PushStyleVar(ctx, ImGui.StyleVar_FrameBorderSize, math.max(1, S))
+  ImGui.PushStyleColor(ctx, ImGui.Col_Border, MARK)
+  ImGui.SetNextItemWidth(ctx, px(220))
   local changed, name = ImGui.InputText(ctx, "Your name", ui.nameBuf or st.profile.name)
   if changed then
     ui.nameBuf = name
     if name:match("%S") then st.profile.name = name:sub(1, 32); saveSoon() end
   end
-  ImGui.SetNextItemWidth(ctx, 220)
+  tip("Shown in the header, beside your banner. Up to 32 letters.")
+  ImGui.SetNextItemWidth(ctx, px(220))
   local mins = math.floor(st.settings.idle / 60)
   local ch2, nm = ImGui.SliderInt(ctx, "Minutes before you count as away", mins, 1, 15)
   if ch2 then st.settings.idle = nm * 60; saveSoon() end
   tip("With nothing happening for this long, the clock stops until you're back. Playback gives you at least 8 minutes.")
   local chm, calm = ImGui.Checkbox(ctx, "Reduce Motion", st.settings.reduceMotion)
   if chm then st.settings.reduceMotion = calm; saveSoon() end
-  tip("No sparks, confetti, shaking, flashing or bouncing: rewards appear at their " ..
+  tip("On: no sparks, confetti, shaking, flashing or bouncing - rewards appear at their " ..
       "final size and messages without sliding in. Apple's Reduce Motion, for this window.")
   local on = W.autostartOn()
-  local ch3, want = ImGui.Checkbox(ctx, "Start the battle pass when REAPER starts", on)
+  local ch3, want = ImGui.Checkbox(ctx, "Start the Battle Pass When REAPER Starts", on)
   if ch3 then
     if W.setAutostart(want, SCRIPT) then ui.status = want and "It will start with REAPER." or "It won't start with REAPER any more."
-    else ui.status = "Could not change REAPER's startup script." end
+    else ui.status = "Could not change REAPER's startup script - check that REAPER's Scripts folder can be written to." end
   end
-  if pick("Open my plugin list", false, 180) then
+  tip("On: REAPER opens the battle pass every time it starts, so the clock never misses a session.")
+  ImGui.PopStyleColor(ctx, 1)
+  ImGui.PopStyleVar(ctx, 1)
+  local _, ry = here()
+  local labels = { "Open My Plugin List", "Reload Plugins" }
+  local spots, bh = flowRows(x, ry, w, { btnW(labels[1], 180), btnW(labels[2], 140) })
+  if pickAt(spots[1][1], spots[1][2], labels[1], false, 180) then
     local path = W.ensurePluginFile()
-    if not W.open(path) then ImGui.SetClipboardText(ctx, path); ui.status = "The list is at " .. path .. " (path copied)" end
+    if not W.open(path) then ImGui.SetClipboardText(ctx, path); ui.status = "The list is at " .. path .. " (path copied)." end
   end
   tip("Write the plugins you want quests about, one a line. Leave it empty to use everything installed.")
-  ImGui.SameLine(ctx)
-  if pick("Reload plugins", false, 140) then
+  if pickAt(spots[2][1], spots[2][2], labels[2], false, 140) then
     plugins, pluginSource = W.plugins()
     ui.status = "Quests now choose from " .. pluginSource .. ": " .. #plugins .. " plugins (new quests from tomorrow, or reroll one)."
   end
-  dim("Plugin quests use " .. pluginSource .. " (" .. #plugins .. ").  Progress is saved in " .. W.dataDir())
+  tip("Reads your plugin list again, after you have changed it.")
+  at(x, ry + bh + 12)
+  dim("Plugin quests use " .. pluginSource .. " (" .. #plugins .. ").")
   if ui.status ~= "" then dim(ui.status) end
-  local _, endY = ImGui.GetCursorScreenPos(ctx)
+  local _, endY = here()
   finish(x, endY)
 end
 
@@ -1791,15 +2136,24 @@ local PAGES = { pass = pagePass, quests = pageQuests, shop = pageShop, gear = pa
 -- The stage: rewards revealed one at a time over the page
 ------------------------------------------------------------------------------
 
+-- Return presses the stage's main button - unless the keyboard is on a
+-- button already, which Return then presses instead (only one of them).
+local function enterKey()
+  return ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) and not ImGui.IsAnyItemFocused(ctx)
+end
+
 local function closeModal()
   table.remove(ui.modals, 1)
   saveSoon()
 end
 
-local function bigTitle(dl, cx, y, text, col, t, size)
+-- A big title that grows in, never wider than the stage.
+local function bigTitle(dl, cx, y, text, col, t, size, maxw)
+  size = size or 34
+  if maxw then size = fitSize(FONT.huge, size, text, maxw) end
   local k = settle(F.ease.outBack, t / 0.5)
-  local sz = (size or 34) * (0.4 + 0.6 * k)
-  dtext(dl, FONT.huge, sz, cx, y + (size or 34) * (1 - k) * 0.5, A(col, math.min(1, t * 3)), text, "center")
+  local sz = size * (0.4 + 0.6 * k)
+  dtext(dl, FONT.huge, sz, cx, y + size * (1 - k) * 0.5, A(col, math.min(1, t * 3)), text, "center")
 end
 
 local TIER_TITLES = { small = "TIER %d UNLOCKED", big = "HOUR COMPLETE!  TIER %d", milestone = "MILESTONE  TIER %d",
@@ -1813,6 +2167,10 @@ local function collect(m)
   end
   closeModal()
 end
+
+-- Every stage is drawn in points on a stage at least this big; a smaller
+-- window scrolls it (frame()).
+local STAGE_W, STAGE_H = 340, 470
 
 local function modalReward(m, dl, x, y, w, h)
   local t = m.t
@@ -1828,88 +2186,107 @@ local function modalReward(m, dl, x, y, w, h)
     local cy = y + h * 0.45
     D.rays(dl, cx, cy, math.max(w, h), 16, t * 0.3, A(cc, 0.09))
     D.halo(dl, cx, cy, 120, cc, 0.3)
-    local ang, s = 0, 130
+    local ang, sz = 0, 130
+    local title = L.RARITY[m.crate].name:upper() .. " CRATE"
     if m.phase == "closed" then
       cy = cy + wave(t * 2.5) * 6
-      bigTitle(dl, cx, y + 24, L.RARITY[m.crate].name:upper() .. " CRATE", RT(m.crate), t, 34)
-      dtext(dl, FONT.bold, 15, cx, y + h - 70, A(TEXT, 0.6 + 0.4 * wave(t * 4)), "Click the crate to open it", "center")
-      ImGui.SetCursorScreenPos(ctx, cx - s * 0.6, cy - s * 0.5)
-      if ImGui.InvisibleButton(ctx, "crate", s * 1.2, s) or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) then
+      bigTitle(dl, cx, y + 24, title, RT(m.crate), t, 34, w - 40)
+      ctext(dl, FONT.bold, 15, cx, y + h - 70, w - 40, A(TEXT, ui.calm and 1 or (0.6 + 0.4 * wave(t * 4))),
+            "Click the crate, or press Return, to open it")
+      -- The crate is a button: the mouse, Tab and Return all reach it.
+      if hit("crate", cx - sz * 0.6, cy - sz * 0.5, sz * 1.2, sz) or enterKey() then
         m.phase, m.t = "shake", 0
       end
-      if ImGui.IsItemHovered(ctx) then s = s * 1.05 end
+      tip("Open the " .. L.RARITY[m.crate].name .. " Crate.")
+      if ImGui.IsItemHovered(ctx) then sz = sz * 1.05 end
     else
       local k = math.min(1, t / 1.1)
       ang = wave(t * 46) * 0.13 * k
-      s = 130 * (1 + 0.1 * k)
-      bigTitle(dl, cx, y + 24, L.RARITY[m.crate].name:upper() .. " CRATE", RT(m.crate), 1, 34)
+      sz = 130 * (1 + 0.1 * k)
+      bigTitle(dl, cx, y + 24, title, RT(m.crate), 1, 34, w - 40)
       if fx.rnd() < 0.3 + k then
-        F.burst(fx, cx + (fx.rnd() - 0.5) * s, cy + (fx.rnd() - 0.5) * s * 0.6, 1, { col = cc, speed = 160 + 200 * k, life = 0.6 })
+        F.burst(fx, X(cx + (fx.rnd() - 0.5) * sz), Y(cy + (fx.rnd() - 0.5) * sz * 0.6), 1, { col = cc, speed = 160 + 200 * k, life = 0.6 })
       end
       F.shake(fx, 3 * k)
       if t >= 1.1 then
         m.phase, m.t = "open", 0
         F.flash(fx, 0.9, cc)
-        F.ring(fx, cx, cy, cc, 260, 0.8)
-        F.ring(fx, cx, cy, BRIGHT, 180, 0.5)
-        F.burst(fx, cx, cy, 90, { cols = { cc, BRIGHT, shade(cc, 0.4) }, speed = 520, life = 1.2, size = 4 })
-        if m.crate >= L.EPIC then F.confetti(fx, cx, cy, 120, 520) end
+        F.ring(fx, X(cx), Y(cy), cc, 260, 0.8)
+        F.ring(fx, X(cx), Y(cy), BRIGHT, 180, 0.5)
+        F.burst(fx, X(cx), Y(cy), 90, { cols = { cc, BRIGHT, shade(cc, 0.4) }, speed = 520, life = 1.2, size = 4 })
+        if m.crate >= L.EPIC then F.confetti(fx, X(cx), Y(cy), 120, 520) end
         F.shake(fx, 14)
       end
     end
-    D.crate(dl, cx, cy, s, cc, ang, 0)
+    D.crate(dl, cx, cy, sz, cc, ang, 0)
     return
   end
 
   local title
   if m.crate then title = "YOUR " .. L.RARITY[m.crate].name:upper() .. " CRATE HELD..."
   else title = string.format(TIER_TITLES[m.tierKind] or TIER_TITLES.small, m.tier) end
-  bigTitle(dl, cx, y + 18, title, m.tierKind and m.tierKind ~= "small" and PASS_TEXT or TEXT, t, 30)
+  bigTitle(dl, cx, y + 18, title, m.tierKind and m.tierKind ~= "small" and PASS_TEXT or TEXT, t, 30, w - 40)
   if m.tier then
-    dtext(dl, FONT.body, 13, cx, y + 58, DIM, L.seasonName(st.pass.season) .. "  /  " ..
-          (m.tierKind == "small" and "fifteen more minutes of music" or "a whole hour of music"), "center")
+    ctext(dl, FONT.body, 13, cx, y + 58, w - 40, DIM, L.seasonName(st.pass.season) .. "  /  " ..
+          (m.tierKind == "small" and "fifteen more minutes of music" or "a whole hour of music"))
   end
 
+  -- The cards: in one row when they fit at 150 points or more, else in rows.
   local n = #m.drops
   local gap = 14
-  local cw = math.min(200, (w - 40 - (n - 1) * gap) / n)
-  local ch = math.min(270, math.max(200, h - 170))
-  local total = n * cw + (n - 1) * gap
+  local perRow = math.max(1, math.min(n, math.floor((w - 40 + gap) / (150 + gap))))
+  local rowsN = math.ceil(n / perRow)
+  local cw = math.min(200, (w - 40 - (perRow - 1) * gap) / perRow)
+  local ch = rowsN == 1 and math.min(270, math.max(200, h - 170)) or 230
   local cardsY = y + 86
   D.rays(dl, cx, cardsY + ch / 2, math.max(w, h), 18, t * 0.25, A(col, 0.07 + 0.03 * wave(t * 2)))
   m.shown, m.pos = m.shown or {}, m.pos or {}
   local lastAt = 0
+  local tipText
   for i, d in ipairs(m.drops) do
-    local at = 0.4 + (i - 1) * 0.38
-    lastAt = at
-    local kx = cx - total / 2 + (i - 1) * (cw + gap)
-    local k = (t - at) / 0.45
-    m.pos[i] = { kx + cw / 2, cardsY + ch / 2 }
+    local at0 = 0.4 + (i - 1) * 0.38
+    lastAt = at0
+    local rowI, colI = math.floor((i - 1) / perRow), (i - 1) % perRow
+    local inRow = math.min(perRow, n - rowI * perRow)
+    local total = inRow * cw + (inRow - 1) * gap
+    local kx = cx - total / 2 + colI * (cw + gap)
+    local ky = cardsY + rowI * (ch + gap)
+    local k = (t - at0) / 0.45
+    m.pos[i] = { X(kx + cw / 2), Y(ky + ch / 2) }
     if k > 0 then
       if not m.shown[i] then
         m.shown[i] = true
         local dc = RC(d.rarity)
-        F.burst(fx, kx + cw / 2, cardsY + ch / 2, 20 + d.rarity * 8, { cols = { dc, BRIGHT }, speed = 240 + d.rarity * 40 })
-        F.ring(fx, kx + cw / 2, cardsY + ch / 2, dc, 90 + d.rarity * 10, 0.6)
-        if d.rarity >= L.LEGENDARY then F.flash(fx, 0.5, dc); F.confetti(fx, kx + cw / 2, cardsY + 20, 60, 380) end
+        local px0, py0 = X(kx + cw / 2), Y(ky + ch / 2)
+        F.burst(fx, px0, py0, 20 + d.rarity * 8, { cols = { dc, BRIGHT }, speed = 240 + d.rarity * 40 })
+        F.ring(fx, px0, py0, dc, 90 + d.rarity * 10, 0.6)
+        if d.rarity >= L.LEGENDARY then F.flash(fx, 0.5, dc); F.confetti(fx, px0, Y(ky + 20), 60, 380) end
         if d.rarity >= L.MYTHIC then F.shake(fx, 16) end
       end
-      dropCard(dl, kx, cardsY, cw, ch, d, t, settle(F.ease.outBack, k))
-      if mouseIn(kx, cardsY, kx + cw, cardsY + ch) then
-        if d.type == "gear" then ImGui.SetTooltip(ctx, table.concat(gearLines(d, st.gear.equipped[d.slot]), "\n"))
-        elseif d.type == "idea" then ImGui.SetTooltip(ctx, d.text .. "\n" .. (d.sub or "") .. "\n\nIt's in your Idea vault.") end
+      local cut = dropCard(dl, kx, ky, cw, ch, d, t, settle(F.ease.outBack, k))
+      local whole
+      if d.type == "gear" then whole = table.concat(gearLines(d, st.gear.equipped[d.slot]), "\n")
+      elseif d.type == "idea" then whole = d.text .. "\n" .. (d.sub or "") .. "\n\nIt's in your Idea vault."
+      elseif cut then whole = cardWhole(d) end
+      -- Each revealed card is a stop for the keyboard; its tooltip says it all.
+      if whole then
+        hit("card" .. i, kx, ky, cw, ch)
+        if ImGui.IsItemHovered(ctx) or keyFocused() then tipText = whole end
       end
     else
       -- Face down until its turn.
-      D.rect(dl, kx, cardsY, kx + cw, cardsY + ch, GROUND, 8)
-      D.frame(dl, kx, cardsY, kx + cw, cardsY + ch, RULE, 8, 1.5)
-      dtext(dl, FONT.huge, 40, kx + cw / 2, cardsY + ch / 2 - 22, RULE, "?", "center")
+      D.rect(dl, kx, ky, kx + cw, ky + ch, GROUND, 8)
+      D.frame(dl, kx, ky, kx + cw, ky + ch, MARK, 8, 1.5)
+      dtext(dl, FONT.huge, 40, kx + cw / 2, ky + ch / 2 - 22, MARK, "?", "center")
     end
   end
+  if tipText then ImGui.SetTooltip(ctx, tipText) end
   local ready = t > lastAt + 0.5
+  local by = cardsY + rowsN * (ch + gap) + 4
   if ready then
-    if pickAt(cx - 70, cardsY + ch + 18, "Collect", true, 140) or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) then collect(m) end
-  elseif ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) then m.t = lastAt + 0.5 end
+    if pickAt(cx - 70, by, "Collect", true, 140) or enterKey() then collect(m) end
+  elseif enterKey() then m.t = lastAt + 0.5 end
+  m.height = by + 28 + 24 - y
 end
 
 local function modalLevel(m, dl, x, y, w, h)
@@ -1917,16 +2294,17 @@ local function modalLevel(m, dl, x, y, w, h)
   local cx, cy = x + w / 2, y + h * 0.38
   if not m.started then
     m.started = true
-    F.ring(fx, cx, cy, XP_COL, 300, 0.9)
-    F.ring(fx, cx, cy, BRIGHT, 200, 0.6)
-    F.confetti(fx, cx, cy, 110, 480)
+    F.ring(fx, X(cx), Y(cy), XP_COL, 300, 0.9)
+    F.ring(fx, X(cx), Y(cy), BRIGHT, 200, 0.6)
+    F.confetti(fx, X(cx), Y(cy), 110, 480)
     F.flash(fx, 0.6, XP_COL)
   end
   D.rect(dl, x, y, x + w, y + h, A(DEEP, math.min(1, t * 4) * 0.95), 8)
   D.rays(dl, cx, cy, math.max(w, h), 20, t * 0.35, A(XP_COL, 0.10))
   D.halo(dl, cx, cy, 110, XP_COL, 0.35)
   local k = settle(F.ease.outBack, t / 0.6)
-  dtext(dl, FONT.huge, 52 * (2 - k), cx, y + 20, A(TEXT, math.min(1, t * 3)), "LEVEL UP!", "center")
+  local size = fitSize(FONT.huge, 52, "LEVEL UP!", (w - 40) / 1.3)
+  dtext(dl, FONT.huge, size * (2 - k), cx, y + 20, A(TEXT, math.min(1, t * 3)), "LEVEL UP!", "center")
   local kn = settle(F.ease.outElastic, math.max(0, t - 0.25) / 0.9)
   if kn > 0 then dtext(dl, FONT.huge, 96 * kn, cx, cy - 48 * kn, BRIGHT, tostring(m.level), "center") end
   if t > 0.9 then
@@ -1935,7 +2313,9 @@ local function modalLevel(m, dl, x, y, w, h)
     dtext(dl, FONT.bold, 15, cx, cy + 150, RT(m.crate), "+ " .. L.RARITY[m.crate].name .. " Crate", "center")
   end
   if t > 1.2 then
-    if pickAt(cx - 150, cy + 186, "Open it now", true, 140) then
+    local w1, w2 = btnW("Open It Now", 140), btnW("Later", 140)
+    local x0 = cx - (w1 + 12 + w2) / 2
+    if pickAt(x0, cy + 186, "Open It Now", true, 140) then
       closeModal()
       G.openCrate(st, ss, m.crate)
       handleNotices()
@@ -1943,7 +2323,8 @@ local function modalLevel(m, dl, x, y, w, h)
       local last = table.remove(ui.modals)
       table.insert(ui.modals, 1, last)
     end
-    if pickAt(cx + 10, cy + 186, "Later", false, 140) or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) then closeModal() end
+    if pickAt(x0 + w1 + 12, cy + 186, "Later", false, 140) or enterKey() then closeModal() end
+    tip("The crate waits on the Loot page.")
   end
 end
 
@@ -1951,67 +2332,75 @@ local function modalCheckin(m, dl, x, y, w, h)
   local t = m.t
   local cx = x + w / 2
   D.rect(dl, x, y, x + w, y + h, A(DEEP, math.min(1, t * 4) * 0.95), 8)
-  bigTitle(dl, cx, y + 20, "DAILY CHECK-IN", SELECTED, m.got and 1 or t, 32)
+  bigTitle(dl, cx, y + 20, "DAILY CHECK-IN", SELECTED, m.got and 1 or t, 32, w - 40)
   local day = m.got and m.got.day or G.checkinPreview(st, ui.epoch)
-  local bw = math.min(90, (w - 60) / 7)
-  local bx0 = cx - (7 * bw + 6 * 8) / 2
+  local bwid = math.min(90, (w - 40 - 6 * 6) / 7)
+  local gapB = (bwid < 50) and 6 or 8
+  local bx0 = cx - (7 * bwid + 6 * gapB) / 2
   local by = y + 90
   for i = 1, 7 do
-    local bx = bx0 + (i - 1) * (bw + 8)
+    local bx = bx0 + (i - 1) * (bwid + gapB)
     local r = G.CHECKIN[i]
-    D.rect(dl, bx, by, bx + bw, by + 96, i < day and GROUND or SUNKEN, 6)
-    dtext(dl, FONT.body, 11, bx + bw / 2, by + 6, i == day and SELECTED or DIM, "DAY " .. i, "center")
-    if r.crate then D.crate(dl, bx + bw / 2, by + 44, 32, RC(r.crate))
-    elseif r.token then icon(dl, "dice", bx + bw / 2, by + 44, 12, RC(3))
-    else ICON.coin(dl, bx + bw / 2, by + 44, 13) end
-    dtext(dl, FONT.body, 11, bx + bw / 2, by + 70, DIM, r.coins and tostring(r.coins) or (r.crate and "crate" or "reroll"), "center")
+    D.rect(dl, bx, by, bx + bwid, by + 96, i < day and GROUND or SUNKEN, 6)
+    dtext(dl, FONT.body, bwid < 50 and 10 or 11, bx + bwid / 2, by + 6, i == day and SELECTED or DIM,
+          i == day and "TODAY" or (bwid < 50 and ("D" .. i) or ("DAY " .. i)), "center")
+    if r.crate then D.crate(dl, bx + bwid / 2, by + 44, math.min(32, bwid - 8), RC(r.crate))
+    elseif r.token then icon(dl, "dice", bx + bwid / 2, by + 44, 12, RC(3))
+    else ICON.coin(dl, bx + bwid / 2, by + 44, 13) end
+    dtext(dl, FONT.body, bwid < 50 and 10 or 11, bx + bwid / 2, by + 70, DIM, r.coins and tostring(r.coins) or (r.crate and "crate" or "reroll"), "center")
     local stamped = i < day or (m.got and i == day and t > 0.55)
     if i == day and m.got then
       local k = math.min(1, math.max(0, (t - 0.2) / 0.35))
       if k > 0 then
-        local s = 2.4 - 1.4 * settle(F.ease.outBack, k)
-        local sx, sy = bx + bw / 2, by + 48
-        D.circle(dl, sx, sy, 22 * s, A(PASS_COL, math.min(1, k * 2)))
-        D.check(dl, sx, sy, 22 * s, A(INK, math.min(1, k * 2)))
+        local sc = 2.4 - 1.4 * settle(F.ease.outBack, k)
+        local sx, sy = bx + bwid / 2, by + 48
+        D.circle(dl, sx, sy, 22 * sc, A(PASS_COL, math.min(1, k * 2)))
+        D.check(dl, sx, sy, 22 * sc, A(INK, math.min(1, k * 2)))
         if k >= 1 and not m.landed then
           m.landed = true
           F.flash(fx, 0.35, PASS_COL)
-          F.ring(fx, sx, sy, PASS_COL, 90, 0.6)
-          F.confetti(fx, sx, sy, 70, 360)
+          F.ring(fx, X(sx), Y(sy), PASS_COL, 90, 0.6)
+          F.confetti(fx, X(sx), Y(sy), 70, 360)
           F.shake(fx, 8)
         end
       end
     elseif stamped then
-      D.circle(dl, bx + bw - 12, by + 12, 9, PASS_COL)
-      D.check(dl, bx + bw - 12, by + 12, 9, INK)
+      D.circle(dl, bx + bwid - 12, by + 12, 9, PASS_COL)
+      D.check(dl, bx + bwid - 12, by + 12, 9, INK)
     end
   end
   local ty = by + 116
   if not m.got then
-    dtext(dl, FONT.body, 14, cx, ty, DIM, "Check in every day to keep your streak. Day 7 holds an Epic Crate.", "center")
-    if pickAt(cx - 80, ty + 34, "Check in", true, 160) or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) then
+    ty = ty + ctext(dl, FONT.body, 14, cx, ty, w - 40, DIM, "Check in every day to keep your streak. Day 7 holds an Epic Crate.")
+    local w1, w2 = btnW("Check In", 160), btnW("Not Now", 100)
+    local x0 = cx - (w1 + 12 + w2) / 2
+    if pickAt(x0, ty + 14, "Check In", true, 160) or enterKey() then
       m.got, m.t = G.checkin(st, ss, ui.epoch), 0
       if not m.got then closeModal() end
       saveSoon()
     end
-    if pickAt(cx - 50, ty + 70, "Not now", false, 100) then closeModal() end
+    if pickAt(x0 + w1 + 12, ty + 14, "Not Now", false, 100) then closeModal() end
+    tip("It stays on the Quests page until the day turns, at 4am.")
     return
   end
   if t > 0.7 then
     local g = m.got
-    ICON.flame(dl, cx - 70, ty + 12, 13, PASS_COL)
-    dtext(dl, FONT.bold, 22, cx - 50, ty, TEXT, g.streak .. " day streak")
+    local streakText = g.streak .. " day streak"
+    local sw = measure(FONT.bold, 22, streakText) + 30
+    ICON.flame(dl, cx - sw / 2 + 10, ty + 12, 13, PASS_COL)
+    dtext(dl, FONT.bold, 22, cx - sw / 2 + 30, ty, TEXT, streakText)
     local parts = {}
     if g.coins then parts[#parts + 1] = fmtNum(g.coins) .. " coins" end
     if g.xp then parts[#parts + 1] = math.floor(g.xp) .. " XP" end
     if g.token then parts[#parts + 1] = L.TOKENS[g.token].name end
     if g.crate then parts[#parts + 1] = L.RARITY[g.crate].name .. " Crate" end
-    dtext(dl, FONT.body, 14, cx, ty + 34, TEXT, table.concat(parts, "  +  "), "center")
-    if g.freezes and g.freezes > 0 then dtext(dl, FONT.body, 12, cx, ty + 54, RT(4), "A Streak Freeze kept your streak alive", "center")
-    elseif g.broke then dtext(dl, FONT.body, 12, cx, ty + 54, DIM, "Your streak starts again today", "center") end
+    local used = ctext(dl, FONT.body, 14, cx, ty + 34, w - 40, TEXT, table.concat(parts, "  +  "))
+    if g.freezes and g.freezes > 0 then used = used + ctext(dl, FONT.body, 12, cx, ty + 36 + used, w - 40, RT(4), "A Streak Freeze kept your streak alive")
+    elseif g.broke then used = used + ctext(dl, FONT.body, 12, cx, ty + 36 + used, w - 40, DIM, "Your streak starts again today") end
+    m.collectY = ty + 46 + used
   end
-  if t > 1.0 and (pickAt(cx - 70, ty + 80, "Collect", true, 140) or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter)) then
-    if m.got.coins then F.coins(fx, cx, ty + 40, 14, ui.coinPos[1], ui.coinPos[2]) end
+  if t > 1.0 and (pickAt(cx - 70, m.collectY or (ty + 80), "Collect", true, 140) or enterKey()) then
+    if m.got.coins then F.coins(fx, X(cx), Y(ty + 40), 14, ui.coinPos[1], ui.coinPos[2]) end
     closeModal()
   end
 end
@@ -2024,7 +2413,7 @@ local function modalRedeem(m, dl, x, y, w, h)
   -- The ticket drops in, then tears in two.
   local drop = settle(F.ease.outBack, t / 0.5)
   local tear = settle(F.ease.inOut, (t - 0.8) / 0.7)
-  local tw, th = 260, 120
+  local tw, th = math.min(260, w - 40), 120
   local ty = cy - 160 * (1 - drop)
   local halves = { { -1, cx - tw / 4 }, { 1, cx + tw / 4 } }
   for _, hv in ipairs(halves) do
@@ -2037,33 +2426,34 @@ local function modalRedeem(m, dl, x, y, w, h)
     D.circle(dl, cx - tw / 2, ty, 16, DEEP)
     D.circle(dl, cx + tw / 2, ty, 16, DEEP)
     icon(dl, m.icon, cx, ty - 10, 26, INK, CONTROL)
-    dtext(dl, FONT.bold, 15, cx, ty + 30, INK, m.name:upper(), "center")
+    dtext(dl, FONT.bold, fitSize(FONT.bold, 15, m.name:upper(), tw - 40), cx, ty + 30, INK, m.name:upper(), "center")
     for i = 0, 10 do D.rect(dl, cx - 1, ty - th / 2 + 6 + i * 10, cx + 1, ty - th / 2 + 11 + i * 10, INK) end
   elseif not m.burst then
     m.burst = true
-    F.confetti(fx, cx, ty, 140, 520)
-    F.ring(fx, cx, ty, SELECTED, 220, 0.7)
+    F.confetti(fx, X(cx), Y(ty), 140, 520)
+    F.ring(fx, X(cx), Y(ty), SELECTED, 220, 0.7)
     F.flash(fx, 0.4, SELECTED)
   end
   if t > 1.3 then
     local what = m.name:gsub(" Pass$", ""):lower()
-    bigTitle(dl, cx, cy + 40, "ENJOY YOUR " .. what:upper() .. "!", SELECTED, t - 1.3, 30)
-    dtext(dl, FONT.body, 14, cx, cy + 90, DIM, "You earned this one. Guilt-free.", "center")
-    if pickAt(cx - 70, cy + 130, "Done", true, 140) or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) then closeModal() end
+    bigTitle(dl, cx, cy + 40, "ENJOY YOUR " .. what:upper() .. "!", SELECTED, t - 1.3, 30, w - 40)
+    ctext(dl, FONT.body, 14, cx, cy + 90, w - 40, DIM, "You earned this one. Guilt-free.")
+    if pickAt(cx - 70, cy + 130, "Done", true, 140) or enterKey() then closeModal() end
   end
 end
 
 local function modalSeason(m, dl, x, y, w, h)
   local t = m.t
   local cx, cy = x + w / 2, y + h * 0.4
-  if not m.started then m.started = true; F.confetti(fx, cx, cy, 150, 600); F.flash(fx, 0.6, PASS_COL) end
+  if not m.started then m.started = true; F.confetti(fx, X(cx), Y(cy), 150, 600); F.flash(fx, 0.6, PASS_COL) end
   D.rect(dl, x, y, x + w, y + h, A(DEEP, math.min(1, t * 4) * 0.95), 8)
   D.rays(dl, cx, cy, math.max(w, h), 24, t * 0.2, A(PASS_COL, 0.10))
-  bigTitle(dl, cx, cy - 90, "SEASON " .. m.season, PASS_TEXT, t, 28)
-  bigTitle(dl, cx, cy - 40, m.name:upper(), TEXT, t - 0.3, 52)
+  bigTitle(dl, cx, cy - 90, "SEASON " .. m.season, PASS_TEXT, t, 28, w - 40)
+  bigTitle(dl, cx, cy - 40, m.name:upper(), TEXT, t - 0.3, 52, w - 40)
   if t > 1 then
-    dtext(dl, FONT.body, 14, cx, cy + 40, DIM, "A new battle pass: " .. L.SEASON_TIERS .. " tiers, a Mythic finale, and bonus tiers forever after.", "center")
-    if pickAt(cx - 70, cy + 80, "Let's go", true, 140) or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) then closeModal() end
+    local used = ctext(dl, FONT.body, 14, cx, cy + 40, w - 40, DIM,
+                       "A new battle pass: " .. L.SEASON_TIERS .. " tiers, a Mythic finale, and bonus tiers forever after.")
+    if pickAt(cx - 70, cy + 52 + used, "Let's Go", true, 140) or enterKey() then closeModal() end
   end
 end
 
@@ -2071,6 +2461,7 @@ local WELCOME = {
   "Keep this window open while you make music. Dock it anywhere: right-click its title bar.",
   "Every 15 minutes of active music-making unlocks a tier of the season's battle pass. Every hour is a big one.",
   "It pauses by itself when you're away, and carries your progress across every project.",
+  "It only notices that something happened in REAPER - never what you type - and everything it keeps stays on this computer.",
   "Everything you do earns XP. Every level gives a loot crate.",
   "Spend coins in the Shop on passes - a takeaway, a movie, a gaming session - then redeem them when you've earned the break.",
   "Ideas you win (chords, drums, melodies, titles...) wait in the Idea vault, ready to drop into your project.",
@@ -2081,21 +2472,22 @@ local function modalWelcome(m, dl, x, y, w, h)
   local cx = x + w / 2
   D.rect(dl, x, y, x + w, y + h, A(DEEP, 0.95), 8)
   D.rays(dl, cx, y + 70, math.max(w, h), 18, t * 0.2, A(SELECTED, 0.05))
-  bigTitle(dl, cx, y + 26, "DAW BATTLE PASS", SELECTED, t, 40)
+  bigTitle(dl, cx, y + 26, "DAW BATTLE PASS", SELECTED, t, 40, w - 40)
   local ty = y + 96
   local tw = math.min(560, w - 60)
   for i, line in ipairs(WELCOME) do
-    local k = math.min(1, math.max(0, (t - 0.3 - i * 0.15) * 3))
+    local k = ui.calm and 1 or math.min(1, math.max(0, (t - 0.3 - i * 0.15) * 3))
     ty = ty + wrapText(dl, FONT.body, 14, cx - tw / 2, ty, tw, A(TEXT, k), line) + 10
   end
   if t > 1.4 then
-    dtext(dl, FONT.bold, 14, cx, ty + 4, RT(4), "Here's a Rare Crate to get you started.", "center")
-    if pickAt(cx - 70, ty + 36, "Let's go", true, 140) or ImGui.IsKeyPressed(ctx, ImGui.Key_Enter) then
+    ty = ty + 4 + ctext(dl, FONT.bold, 14, cx, ty + 4, tw, RT(4), "Here's a Rare Crate to get you started.")
+    if pickAt(cx - 70, ty + 16, "Let's Go", true, 140) or enterKey() then
       st.settings.welcome = true
       st.inv.crates[4] = st.inv.crates[4] + 1
       closeModal()
     end
   end
+  m.height = ty + 16 + 28 + 24 - y
 end
 
 local MODALS = { reward = modalReward, level = modalLevel, checkin = modalCheckin, redeem = modalRedeem,
@@ -2107,114 +2499,189 @@ local MODALS = { reward = modalReward, level = modalLevel, checkin = modalChecki
 
 local function drawOverlay()
   local dl = ImGui.GetForegroundDrawList(ctx)
+  -- Particles and floating numbers live in screen pixels (they fly between
+  -- the page and the header), so they are drawn with the scale set aside;
+  -- only their size grows with the text.
+  local k = S
+  S = 1
   for _, p in ipairs(fx.particles) do
     local a = math.max(0, math.min(1, p.life / p.max))
-    if p.kind == "spark" then D.circle(dl, p.x, p.y, math.max(0.5, p.size * a), A(p.col, a))
-    elseif p.kind == "confetti" then D.box(dl, p.x, p.y, p.size * 1.6, p.size * 0.8 * math.abs(math.cos(p.rot)), p.rot, A(p.col, math.min(1, a * 2)))
-    elseif p.kind == "coin" then ICON.coin(dl, p.x, p.y, p.size)
-    elseif p.kind == "ring" then D.ring(dl, p.x, p.y, p.size * (1 - a) + 4, A(p.col, a), 3)
-    elseif p.kind == "star" then D.star(dl, p.x, p.y, p.size * a, A(p.col, a)) end
+    local size = p.size * k
+    if p.kind == "spark" then D.circle(dl, p.x, p.y, math.max(0.5, size * a), A(p.col, a))
+    elseif p.kind == "confetti" then D.box(dl, p.x, p.y, size * 1.6, size * 0.8 * math.abs(math.cos(p.rot)), p.rot, A(p.col, math.min(1, a * 2)))
+    elseif p.kind == "coin" then ICON.coin(dl, p.x, p.y, size)
+    elseif p.kind == "ring" then D.ring(dl, p.x, p.y, p.size * (1 - a) + 4, A(p.col, a), 3 * k)
+    elseif p.kind == "star" then D.star(dl, p.x, p.y, size * a, A(p.col, a)) end
   end
   for _, f in ipairs(fx.floaters) do
     local a = math.min(1, f.life / f.max * 2)
-    dtext(dl, FONT.bold, f.big and 22 or 15, f.x, f.y, A(f.col, a), f.text, "center")
+    dtext(dl, FONT.bold, (f.big and 22 or 15) * k, f.x, f.y, A(f.col, a), f.text, "center")
   end
   if fx.flash > 0 then D.rect(dl, ui.winX, ui.winY, ui.winX + ui.winW, ui.winY + ui.winH, A(fx.flashCol, fx.flash * 0.45)) end
+  S = k
 
   -- A toast stays until it is clicked, Esc is pressed, or newer ones push it
-  -- out (0018): Apple asks for nothing that goes away on a timer. Where each
-  -- one is drawn is kept, so next frame's click can find it.
+  -- out (0018): Apple asks for nothing that goes away on a timer. Toasts are
+  -- in front, so they sit on the popups' lighter grey. Where each one is
+  -- drawn is kept (in screen pixels), so next frame's click can find it; a
+  -- message cut short shows whole when pointed at.
+  origin(ui.winX, ui.winY)
+  local winW = ui.winW / S
   local ty = ui.winY + 120
   ui.toastRects = {}
+  local tipText
   for i = #fx.toasts, 1, -1 do
     local t = fx.toasts[i]
     local slide = settle(F.ease.outBack, t.age / 0.35)
-    local a = 1
     local col = RC(t.rarity or 3)
     if t.ach then
-      local tw, th = math.min(460, ui.winW - 40), 76
-      local tx = ui.winX + (ui.winW - tw) / 2
+      local tw, th = math.min(460, winW - 40), 76
+      local tx = ui.winX + (winW - tw) / 2
       local yy = ui.winY + 100 - (1 - slide) * 120
-      D.glow(dl, tx, yy, tx + tw, yy + th, col, 8, a)
-      D.rect(dl, tx, yy, tx + tw, yy + th, A(0x1B1F25FF, a), 8)
-      D.frame(dl, tx, yy, tx + tw, yy + th, A(col, a), 8, 2)
+      D.glow(dl, tx, yy, tx + tw, yy + th, col, 8, 1)
+      D.rect(dl, tx, yy, tx + tw, yy + th, POPUP, 8)
+      D.frame(dl, tx, yy, tx + tw, yy + th, col, 8, 2)
       -- A shine sweeping across.
       local sh = ((t.age * 0.8) % 1.4) / 1.0
       if sh < 1 and not ui.calm then
         local sx = tx + sh * (tw + 80) - 40
-        ImGui.DrawList_PushClipRect(dl, tx, yy, tx + tw, yy + th, true)
-        D.quad(dl, { sx, yy }, { sx + 30, yy }, { sx, yy + th }, { sx - 30, yy + th }, A(BRIGHT, 0.12 * a))
-        ImGui.DrawList_PopClipRect(dl)
+        D.clip(dl, tx, yy, tx + tw, yy + th)
+        D.quad(dl, { sx, yy }, { sx + 30, yy }, { sx, yy + th }, { sx - 30, yy + th }, A(BRIGHT, 0.12))
+        D.unclip(dl)
       end
-      icon(dl, "trophy", tx + 38, yy + th / 2, 18, A(col, a))
-      ui.toastRects[i] = { tx, yy, tx + tw, yy + th }
-      dtext(dl, FONT.body, 11, tx + 70, yy + 9, A(RT(t.rarity or 3), a), "ACHIEVEMENT UNLOCKED")
-      dtext(dl, FONT.bold, 17, tx + 70, yy + 23, A(TEXT, a), t.text)
-      dtext(dl, FONT.body, 12, tx + 70, yy + 46, A(DIM, a), t.sub .. "   +" .. (t.coins or 0) .. " coins  +" .. (t.xp or 0) .. " XP")
+      icon(dl, "trophy", tx + 38, yy + th / 2, 18, col)
+      ui.toastRects[i] = { X(tx), Y(yy), X(tx + tw), Y(yy + th) }
+      dtext(dl, FONT.body, 11, tx + 70, yy + 9, RT(t.rarity or 3), "ACHIEVEMENT UNLOCKED")
+      local title, cut1 = clipLine(FONT.bold, 17, t.text, tw - 82)
+      dtext(dl, FONT.bold, 17, tx + 70, yy + 23, TEXT, title)
+      local whole = t.sub .. "   +" .. (t.coins or 0) .. " coins  +" .. (t.xp or 0) .. " XP"
+      local sub, cut2 = clipLine(FONT.body, 12, whole, tw - 82)
+      dtext(dl, FONT.body, 12, tx + 70, yy + 46, POPUP_DIM, sub)
+      if (cut1 or cut2) and mouseIn(tx, yy, tx + tw, yy + th) then tipText = t.text .. "\n" .. whole end
     else
-      local tw, th = math.min(330, ui.winW - 32), 54
-      local tx = ui.winX + ui.winW - 16 - tw * slide
-      D.rect(dl, tx, ty, tx + tw, ty + th, A(0x1B1F25FF, a), 6)
-      D.rect(dl, tx, ty, tx + 4, ty + th, A(col, a), 2)
-      D.frame(dl, tx, ty, tx + tw, ty + th, A(RULE, a), 6, 1)
-      icon(dl, t.icon, tx + 26, ty + th / 2, 11, A(t.icon == "coin" and COIN or col, a), 0x1B1F25FF)
-      dtext(dl, FONT.bold, 14, tx + 46, ty + 9, A(TEXT, a), t.text)
-      local sub = t.sub or ""
-      if measure(FONT.body, 12, sub) > tw - 56 then
-        while #sub > 4 and measure(FONT.body, 12, sub .. "...") > tw - 56 do sub = sub:sub(1, -2) end
-        sub = sub .. "..."
-      end
-      dtext(dl, FONT.body, 12, tx + 46, ty + 29, A(DIM, a), sub)
-      ui.toastRects[i] = { tx, ty, tx + tw, ty + th }
+      local tw, th = math.min(330, winW - 32), 54
+      local tx = ui.winX + winW - 16 - tw * slide
+      D.rect(dl, tx, ty, tx + tw, ty + th, POPUP, 6)
+      D.rect(dl, tx, ty, tx + 4, ty + th, col, 2)
+      D.frame(dl, tx, ty, tx + tw, ty + th, RULE, 6, 1)
+      icon(dl, t.icon, tx + 26, ty + th / 2, 11, t.icon == "coin" and COIN or col, POPUP)
+      local title, cut1 = clipLine(FONT.bold, 14, t.text, tw - 56)
+      dtext(dl, FONT.bold, 14, tx + 46, ty + 9, TEXT, title)
+      local sub, cut2 = clipLine(FONT.body, 12, t.sub or "", tw - 56)
+      dtext(dl, FONT.body, 12, tx + 46, ty + 29, POPUP_DIM, sub)
+      if (cut1 or cut2) and mouseIn(tx, ty, tx + tw, ty + th) then tipText = t.text .. "\n" .. (t.sub or "") end
+      ui.toastRects[i] = { X(tx), Y(ty), X(tx + tw), Y(ty + th) }
       ty = ty + th + 8
     end
   end
+  if tipText then ImGui.SetTooltip(ctx, tipText) end
 end
 
 ------------------------------------------------------------------------------
 -- A frame
 ------------------------------------------------------------------------------
 
+-- Esc lets go of the keyboard's ring first (ImGui does that), then skips a
+-- celebration, then cancels an armed "Click Again" button, then takes the
+-- toasts away - one thing a press. It never closes the window (0009).
+local function escapeKey()
+  return ImGui.IsKeyPressed(ctx, ImGui.Key_Escape) and not ImGui.IsAnyItemFocused(ctx)
+     and not ImGui.IsPopupOpen(ctx, "", ImGui.PopupFlags_AnyPopupId)
+end
+
 -- A click on a toast dismisses it, and the click goes no further: the page
--- under it sees none this frame. Esc with no celebration showing dismisses
--- them all - the keyboard's way to the same thing.
-local function dismissToasts()
+-- under it sees none this frame.
+local function dismissToasts(esc)
   ui.blockClicks = false
-  if #fx.toasts == 0 then return end
-  if not ui.modals[1] and ImGui.IsKeyPressed(ctx, ImGui.Key_Escape) then F.dismiss(fx); return end
-  if not ImGui.IsMouseClicked(ctx, 0) then return end
+  if #fx.toasts == 0 then return false end
+  if esc then F.dismiss(fx); return true end
+  if not ImGui.IsMouseClicked(ctx, 0) then return false end
   local mx, my = ImGui.GetMousePos(ctx)
   for i, r in pairs(ui.toastRects or {}) do
     if fx.toasts[i] and mx >= r[1] and mx < r[3] and my >= r[2] and my < r[4] then
       F.dismiss(fx, i)
       ui.blockClicks = true
-      return
+      return false
     end
+  end
+  return false
+end
+
+-- The View menu: Text Size, with the Mac's own zoom keys beside it, and
+-- Reduce Motion (the same setting as the Stats page's).
+local SHORTCUT_KEY = ((reaper.GetOS() or ""):find("OSX") or (reaper.GetOS() or ""):find("mac")) and "Cmd" or "Ctrl"
+local function menuBar()
+  if not ImGui.BeginMenuBar(ctx) then return end
+  if ImGui.BeginMenu(ctx, "View") then
+    local cur = st.settings.textSize
+    for i, size in ipairs(TEXT_SIZES) do
+      if ImGui.MenuItem(ctx, ("Text Size %d%%"):format(size), i == 1 and (SHORTCUT_KEY .. "+0") or nil, cur == i) then
+        setTextSize(i); saveSoon()
+      end
+    end
+    ImGui.Separator(ctx)
+    if ImGui.MenuItem(ctx, "Bigger Text", SHORTCUT_KEY .. "+=", false, cur < #TEXT_SIZES) then setTextSize(cur + 1); saveSoon() end
+    if ImGui.MenuItem(ctx, "Smaller Text", SHORTCUT_KEY .. "+-", false, cur > 1) then setTextSize(cur - 1); saveSoon() end
+    ImGui.Separator(ctx)
+    if ImGui.MenuItem(ctx, "Reduce Motion", nil, st.settings.reduceMotion == true) then
+      st.settings.reduceMotion = not st.settings.reduceMotion; saveSoon()
+    end
+    ImGui.EndMenu(ctx)
+  end
+  ImGui.EndMenuBar(ctx)
+end
+
+-- Cmd (Ctrl on Windows) with =, - or 0, as in every Mac app that zooms.
+local function zoomKeys()
+  if ImGui.GetKeyMods(ctx) & ImGui.Mod_Shortcut == 0 then return end
+  local cur = st.settings.textSize
+  if ImGui.IsKeyPressed(ctx, ImGui.Key_Equal) or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadAdd) then
+    setTextSize(cur + 1); saveSoon()
+  elseif ImGui.IsKeyPressed(ctx, ImGui.Key_Minus) or ImGui.IsKeyPressed(ctx, ImGui.Key_KeypadSubtract) then
+    setTextSize(cur - 1); saveSoon()
+  elseif ImGui.IsKeyPressed(ctx, ImGui.Key_0) then
+    setTextSize(1); saveSoon()
   end
 end
 
 local function frame()
-  dismissToasts()
+  local esc = escapeKey()
+  menuBar()
+  zoomKeys()
+  local m = ui.modals[1]
+  -- Esc: the stage first, then an armed button, then the toasts.
+  local stageEsc = esc and m ~= nil
+  if esc and not m then
+    if ui.confirm.id then ui.confirm = {}
+    else dismissToasts(true) end
+  end
+  dismissToasts(false)
   drawHeader()
   drawTabs()
-  ImGui.Dummy(ctx, 0, 2)
-  local m = ui.modals[1]
+  ImGui.Dummy(ctx, 0, px(2))
   if m then
+    -- The stage scrolls when the window is smaller than it needs.
     m.t = m.t + ui.dt
-    local x, y = ImGui.GetCursorScreenPos(ctx)
-    local w, h = ImGui.GetContentRegionAvail(ctx)
-    w, h = math.max(320, w), math.max(360, h)
-    local sx, sy = F.shakeOffset(fx)
-    MODALS[m.type](m, ImGui.GetWindowDrawList(ctx), x + sx, y + sy, w, h)
-    if ImGui.IsKeyPressed(ctx, ImGui.Key_Escape) and ui.modals[1] == m and m.type ~= "welcome" then
-      if m.type == "reward" then
-        if m.phase == "closed" or m.phase == "shake" then m.phase, m.t = "open", 0 else collect(m) end
-      else closeModal() end
+    if ImGui.BeginChild(ctx, "stage", 0, 0) then
+      local x, y = ImGui.GetCursorScreenPos(ctx)
+      local aw, ah = ImGui.GetContentRegionAvail(ctx)
+      local sx, sy = F.shakeOffset(fx)
+      origin(x + sx, y + sy)
+      local w = math.max(STAGE_W, aw / S)
+      local h = math.max(STAGE_H, ah / S, m.height or 0)
+      MODALS[m.type](m, ImGui.GetWindowDrawList(ctx), x + sx, y + sy, w, h)
+      if stageEsc and ui.modals[1] == m and m.type ~= "welcome" then
+        if m.type == "reward" then
+          if m.phase == "closed" or m.phase == "shake" then m.phase, m.t = "open", 0 else collect(m) end
+        else closeModal() end
+      end
+      origin(x, y)
+      at(x, y + h - 2)
+      ImGui.Dummy(ctx, px(w), 1)
+      ImGui.EndChild(ctx)
     end
-    ImGui.SetCursorScreenPos(ctx, x, y + h - 4)
-    ImGui.Dummy(ctx, 1, 1)
   else
-    if ImGui.BeginChild(ctx, "page", 0, 0) then
+    if ImGui.BeginChild(ctx, "page", 0, 0, 0, ImGui.WindowFlags_HorizontalScrollbar) then
       PAGES[ui.tab]()
       ImGui.EndChild(ctx)
     end
@@ -2249,12 +2716,28 @@ end
 
 local sectionID, cmdID
 
+-- "DAW Battle Pass - Quests", or the celebration in front of the page.
+local MODAL_NAMES = { reward = "Reward", checkin = "Check In", welcome = "Welcome", level = "Level Up",
+                      redeem = "Redeemed", season = "New Season" }
+local function windowTitle()
+  local m = ui.modals[1]
+  if m then return TITLE .. " \u{2014} " .. (MODAL_NAMES[m.type] or "Reward") end
+  for _, t in ipairs(TABS) do if t.id == ui.tab then return TITLE .. " \u{2014} " .. t.label end end
+  return TITLE
+end
+
 local function loop()
   update()
   ImGui.SetNextWindowSize(ctx, 920, 780, ImGui.Cond_FirstUseEver)
+  -- Small enough to tuck away, never so small its tabs cannot be reached.
+  -- It grows with the text, so at 200% the tabs still fit across.
+  ImGui.SetNextWindowSizeConstraints(ctx, px(420), px(360), 100000, 100000)
   ImGui.SetNextWindowBgAlpha(ctx, 1.0)
   pushTheme()
-  local visible, open = ImGui.Begin(ctx, TITLE, true)
+  pushSize()
+  -- The title names the page (or the celebration) on show; "###" keeps the
+  -- window the same window whatever it says.
+  local visible, open = ImGui.Begin(ctx, windowTitle() .. "###" .. TITLE, true, ImGui.WindowFlags_MenuBar)
   if visible then
     ui.winX, ui.winY = ImGui.GetWindowPos(ctx)
     ui.winW, ui.winH = ImGui.GetWindowSize(ctx)
@@ -2266,6 +2749,7 @@ local function loop()
     frame()
     ImGui.End(ctx)
   end
+  popSize()
   popTheme()   -- outside the visible test: a push always needs its pop
   if open then reaper.defer(loop) end
 end
@@ -2307,13 +2791,21 @@ local function main()
   -- The keyboard alone: Tab and the arrow keys move between controls, Space
   -- or Return presses one, and a ring shows where you are (0018).
   ctx = ImGui.CreateContext(TITLE, ImGui.ConfigFlags_NavEnableKeyboard)
-  FONT = {
-    body = { f = ImGui.CreateFont("sans-serif", 14), size = 14 },
-    bold = { f = ImGui.CreateFont("sans-serif", 16, ImGui.FontFlags_Bold), size = 16 },
-    big  = { f = ImGui.CreateFont("sans-serif", 28, ImGui.FontFlags_Bold), size = 28 },
-    huge = { f = ImGui.CreateFont("sans-serif", 64, ImGui.FontFlags_Bold), size = 64 },
-  }
-  for _, f in pairs(FONT) do ImGui.Attach(ctx, f.f) end
+  -- A set of fonts for each text size, each made at the size it is drawn
+  -- near, so text stays sharp at 200%: the window's own 13-point text (ui),
+  -- and the board's body, bold, big and huge faces.
+  for i, size in ipairs(TEXT_SIZES) do
+    local k = size / 100
+    local function font(base, flags)
+      local pxSize = math.floor(base * k + 0.5)
+      local f = { f = flags and ImGui.CreateFont("sans-serif", pxSize, flags) or ImGui.CreateFont("sans-serif", pxSize), px = pxSize }
+      ImGui.Attach(ctx, f.f)
+      return f
+    end
+    FONTS[i] = { ui = font(BASE_TEXT), body = font(14), bold = font(16, ImGui.FontFlags_Bold),
+                 big = font(28, ImGui.FontFlags_Bold), huge = font(64, ImGui.FontFlags_Bold) }
+  end
+  setTextSize(st.settings.textSize)
   reaper.defer(loop)
 end
 
