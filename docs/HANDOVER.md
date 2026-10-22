@@ -52,3 +52,22 @@ At the end of the session, write a new log in `docs/sessions/`, add a
 decision record for any choice that could reasonably have gone the other
 way (and list it in `docs/ARCHITECTURE.md`), keep `CLAUDE.md` true, and
 update this handover if the next steps have changed.
+
+---
+
+## Writing Battle Pass (the Mac app in `writer/`)
+
+For a session about the writer's app instead, paste this:
+
+I'm continuing work on **Writing Battle Pass**, a Mac app (Swift and SwiftUI,
+Apple silicon) in the `writer/` folder of my repo `KallumS/DAW-Battle-Pass`.
+It's DAW Battle Pass rebuilt for a writer friend: fifteen minutes of writing
+per tier, XP for every letter typed, a wardrobe of clothes, make-up and pens,
+writing prompts as loot, and a shop of treats she can edit. I'm not a
+programmer, so please explain in plain terms.
+
+Read `CLAUDE.md`, then `writer/docs/BUILDING.md`, then the latest log in
+`docs/sessions/`. The container can't compile it: GitHub Actions
+(`.github/workflows/writer-mac.yml`) builds, tests and packages it on a Mac
+and uploads the app and screenshots of every page - read the run's log and
+look at the snapshots after any change.

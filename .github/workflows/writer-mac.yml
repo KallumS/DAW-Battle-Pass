@@ -29,8 +29,6 @@ jobs:
           fetch-depth: 0
       - name: Toolchain
         run: swift --version && sw_vers && uname -m
-      - name: Tests (look for "Demo" and "Economy" in this log)
-        run: swift test
       - name: Build the app
         run: tools/make_app.sh "${GITHUB_REF_NAME#writer-v}"
         if: startsWith(github.ref, 'refs/tags/writer-v')
@@ -40,7 +38,12 @@ jobs:
       - name: Snapshots of every page
         run: tools/snapshots.sh
         continue-on-error: true
+      - name: Tests (look for "Demo" and "Economy" in this log)
+        if: always()
+        run: swift test 2>&1 | grep -v "passed (" 
+        shell: bash -o pipefail {0}
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Writing-Battle-Pass
           path: writer/build/Writing-Battle-Pass.zip

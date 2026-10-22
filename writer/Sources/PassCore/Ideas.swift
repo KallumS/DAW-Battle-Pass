@@ -30,6 +30,7 @@ public enum Ideas {
       if r >= E { sub.append("Told by " + d.word(W.narrators)) }
       if r >= L { sub.append("Twist: " + d.word(W.twists)) }
       if r >= M { sub.append("Title: " + Ideas.bookTitle(d)) }
+      if sub.isEmpty { sub.append("Write the opening scene") }
       return (text, sub.joined(separator: ". "))
     },
     IdeaKind(id: "firstline", label: "First Line", icon: "text.quote", weight: 8) { d, r in

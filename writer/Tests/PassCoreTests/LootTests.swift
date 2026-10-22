@@ -32,6 +32,13 @@ final class LootTests: XCTestCase {
   /// Every prompt kind at every rarity, thousands of times: no blanks, no
   /// placeholders, no "a apple", and rarer is never shorter than Poor.
   func testEveryIdeaAtEveryRarity() {
+    // Each broken rule is reported once, with a count and an example, so
+    // one mistake can't bury the others in the log.
+    var broken: [String: (Int, String)] = [:]
+    func flag(_ rule: String, _ example: String) {
+      let n = (broken[rule]?.0 ?? 0) + 1
+      broken[rule] = (n, broken[rule]?.1 ?? example)
+    }
     let d = Dice(2026)
     var seen: [String: Int] = [:]
     for k in Ideas.all {
@@ -39,21 +46,21 @@ final class LootTests: XCTestCase {
         var totalLen = 0
         for _ in 0..<150 {
           let x = Ideas.make(d, k.id, r)
-          XCTAssertEqual(x.type, "idea")
-          XCTAssertEqual(x.kind, k.id)
-          XCTAssertFalse(x.text.isEmpty, "\(k.id) \(r) has text")
-          XCTAssertFalse(x.sub.isEmpty, "\(k.id) \(r) has a line under it: \(x.text)")
+          if x.type != "idea" || x.kind != k.id { flag("\(k.id): wrong type", x.text) }
+          if x.text.isEmpty { flag("\(k.id) \(Rarity.name(r)): no text", "") }
+          if x.sub.isEmpty { flag("\(k.id) \(Rarity.name(r)): no line under it", x.text) }
           for bad in ["%", "{", "  ", " a a", " a e", " a i", " a o", " a u", "..", "nil"] {
-            XCTAssertFalse((x.text + " " + x.sub).lowercased().contains(bad), "\(k.id) \(r): '\(bad)' in \(x.text) / \(x.sub)")
+            if (x.text + " " + x.sub).lowercased().contains(bad) { flag("\(k.id): '\(bad)'", x.text + " / " + x.sub) }
           }
-          XCTAssertEqual(x.text.first.map { String($0) }, x.text.first.map { String($0).uppercased() }, "\(k.id) starts with a capital: \(x.text)")
+          if let f = x.text.first, String(f) != String(f).uppercased() { flag("\(k.id): starts lower case", x.text) }
           totalLen += x.text.count + x.sub.count
           seen[x.text, default: 0] += 1
         }
-        if r == Rarity.mythic {
-          XCTAssertGreaterThan(totalLen, 150 * 20, "\(k.id) Mythic prompts say something")
-        }
+        if r == Rarity.mythic && totalLen <= 150 * 20 { flag("\(k.id): Mythic prompts too short", "") }
       }
+    }
+    for (rule, (n, example)) in broken.sorted(by: { $0.key < $1.key }) {
+      XCTFail("\(rule) (\(n) times), e.g. \(example)")
     }
     XCTAssertGreaterThan(seen.count, 4000, "endless: thousands of different prompts")
   }
