@@ -39,7 +39,7 @@ struct IdeasPage: View {
   }
 
   func chip(_ id: String, _ label: String) -> some View {
-    Button(label) { model.ideaFilter = id }.buttonStyle(Pill(on: model.ideaFilter == id))
+    Button(label) { model.ideaFilter = id }.buttonStyle(Pill(on: model.ideaFilter == id)).fixedSize()
   }
 }
 
