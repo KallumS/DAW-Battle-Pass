@@ -11,6 +11,13 @@
        coin     - flies to the coin counter, and bumps it on arrival
        ring     - a circle that grows and fades
        star     - a twinkle that stays put
+
+     Reduce Motion (decision 0018, Apple's Accessibility and Motion pages):
+     with `fx.calm` set nothing flies, spins, shakes or flashes - no sparks,
+     confetti, rings or twinkles are made, coins land at once, numbers fade
+     where they appear instead of floating up. Toasts stay until dismissed
+     (F.dismiss) or pushed out by newer ones, whether calm or not: Apple asks
+     for nothing that goes away on a timer.
 ]]
 
 local F = {}
@@ -45,10 +52,14 @@ F.CONFETTI = { 0xFF3FA4FF, 0x3D8EFFFF, 0x3FCF6EFF, 0xFF8A1CFF, 0xA45CFFFF, 0xFFF
 
 function F.new(rnd)
   return { particles = {}, floaters = {}, toasts = {}, shake = 0, flash = 0, flashCol = 0xFFFFFFFF,
-           bumps = {}, t = 0, rnd = rnd or math.random }
+           bumps = {}, t = 0, rnd = rnd or math.random, calm = false }
 end
 
+-- At most this many toasts at once; a newer one pushes the oldest out.
+F.MAX_TOASTS = 4
+
 local function add(fx, p)
+  if fx.calm then return end
   if #fx.particles >= F.MAX_PARTICLES then table.remove(fx.particles, 1) end
   fx.particles[#fx.particles + 1] = p
 end
@@ -88,6 +99,8 @@ end
 -- Coins that fly from (x, y) to (tx, ty) after a short scatter; each one that
 -- lands bumps `bump`.
 function F.coins(fx, x, y, n, tx, ty, bump)
+  -- Calm: the coins are counted, not flown.
+  if fx.calm then return end
   local rnd = fx.rnd
   for i = 1, math.min(n, 40) do
     local a = rnd() * math.pi * 2
@@ -100,26 +113,37 @@ end
 
 function F.floater(fx, text, x, y, col, big)
   fx.floaters[#fx.floaters + 1] = { text = text, x = x, y = y, col = col or 0xFFFFFFFF,
-                                    life = 1.6, max = 1.6, big = big or false }
+                                    life = 1.6, max = 1.6, big = big or false, still = fx.calm }
 end
 
--- t: { text, sub, icon, rarity, life }
+-- t: { text, sub, icon, rarity }. A toast stays until dismissed or pushed out
+-- by newer ones; `age` only times its arrival.
 function F.toast(fx, t)
-  t.life = t.life or 4.5
-  t.max = t.life
   t.age = 0
   fx.toasts[#fx.toasts + 1] = t
-  while #fx.toasts > 5 do table.remove(fx.toasts, 1) end
+  while #fx.toasts > F.MAX_TOASTS do table.remove(fx.toasts, 1) end
+end
+
+-- Takes the i-th toast away (counted from the oldest), or all of them.
+function F.dismiss(fx, i)
+  if i == nil then fx.toasts = {} else table.remove(fx.toasts, i) end
 end
 
 function F.flash(fx, amount, col)
+  if fx.calm then return end
   fx.flash = math.max(fx.flash, amount or 0.6)
   fx.flashCol = col or 0xFFFFFFFF
 end
 
-function F.shake(fx, amount) fx.shake = math.max(fx.shake, amount or 8) end
+function F.shake(fx, amount)
+  if fx.calm then return end
+  fx.shake = math.max(fx.shake, amount or 8)
+end
 
-function F.bump(fx, what) fx.bumps[what] = 1 end
+function F.bump(fx, what)
+  if fx.calm then return end
+  fx.bumps[what] = 1
+end
 
 function F.update(fx, dt)
   fx.t = fx.t + dt
@@ -157,17 +181,12 @@ function F.update(fx, dt)
   local fl = {}
   for _, f in ipairs(fx.floaters) do
     f.life = f.life - dt
-    f.y = f.y - 38 * dt
+    if not f.still then f.y = f.y - 38 * dt end
     if f.life > 0 then fl[#fl + 1] = f end
   end
   fx.floaters = fl
 
-  local ts = {}
-  for _, t in ipairs(fx.toasts) do
-    t.age = t.age + dt
-    if t.age < t.max then ts[#ts + 1] = t end
-  end
-  fx.toasts = ts
+  for _, t in ipairs(fx.toasts) do t.age = t.age + dt end
 
   fx.shake = math.max(0, fx.shake - dt * 30)
   fx.flash = math.max(0, fx.flash - dt * 2.2)

@@ -41,15 +41,22 @@ eq(#fx.particles, 0, "and vanish when they land")
 for _ = 1, 30 do F.update(fx, 1 / 30) end
 eq(fx.bumps.coins, nil, "the bump settles")
 
+-- Toasts stay until dismissed (decision 0018): Apple asks for nothing that
+-- goes away on a timer.
 F.toast(fx, { text = "a" })
-F.toast(fx, { text = "b", life = 1 })
+F.toast(fx, { text = "b" })
 eq(#fx.toasts, 2, "toasts queue")
-for _ = 1, 40 do F.update(fx, 1 / 30) end
-eq(#fx.toasts, 1, "a short toast goes first")
-for _ = 1, 200 do F.update(fx, 1 / 30) end
-eq(#fx.toasts, 0, "and every toast goes in the end")
+for _ = 1, 30 * 120 do F.update(fx, 1 / 30) end
+eq(#fx.toasts, 2, "and are still there two minutes later")
+F.dismiss(fx, 1)
+eq(#fx.toasts, 1, "dismissing one takes it away")
+eq(fx.toasts[1].text, "b", "the one dismissed, not another")
+F.dismiss(fx)
+eq(#fx.toasts, 0, "and dismissing all takes them all")
 for i = 1, 9 do F.toast(fx, { text = tostring(i) }) end
-eq(#fx.toasts, 5, "never more than five at once")
+eq(#fx.toasts, F.MAX_TOASTS, "never more than four at once")
+eq(fx.toasts[1].text, "6", "a newer toast pushes the oldest out")
+fx.toasts = {}
 
 F.floater(fx, "+5 XP", 10, 100)
 local y0 = fx.floaters[1].y
@@ -63,6 +70,29 @@ ok(math.abs(sx) <= 5 and math.abs(sy) <= 5, "a shake stays within its size")
 for _ = 1, 60 do F.update(fx, 1 / 30) end
 eq(fx.flash, 0, "the flash fades")
 eq(fx.shake, 0, "the shake settles")
+
+-- Reduce Motion (decision 0018): nothing flies, shakes or flashes.
+do
+  local calm = F.new(rnd)
+  calm.calm = true
+  F.burst(calm, 100, 100, 50)
+  F.confetti(calm, 100, 100, 50)
+  F.ring(calm, 100, 100)
+  F.twinkle(calm, 100, 100)
+  F.coins(calm, 0, 0, 10, 500, 20)
+  eq(#calm.particles, 0, "calm: no sparks, confetti, rings, twinkles or flying coins")
+  F.flash(calm, 0.8)
+  F.shake(calm, 10)
+  F.bump(calm, "coins")
+  eq(calm.flash, 0, "calm: no flash")
+  eq(calm.shake, 0, "calm: no shake")
+  eq(calm.bumps.coins, nil, "calm: the counter does not jump")
+  F.floater(calm, "+5 XP", 10, 100)
+  F.update(calm, 0.5)
+  eq(calm.floaters[1].y, 100, "calm: a number fades where it appears")
+  F.toast(calm, { text = "a" })
+  eq(#calm.toasts, 1, "calm: toasts still say what happened")
+end
 
 eq(F.alpha(0xFF8800FF, 0.5), 0xFF880080, "alpha halves only the alpha byte")
 eq(F.alpha(0x12345678, 1), 0x12345678, "full alpha changes nothing")

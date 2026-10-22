@@ -28,6 +28,8 @@ local function resetFrame()
   g.idDepth, g.colDepth, g.colStack, g.fontDepth, g.disabled = 0, 0, {}, 0, 0
   g.windowDepth, g.childDepth = 0, 0
   g.buttons, g.ink, g.texts, g.tooltips, g.headings = {}, {}, {}, {}, {}
+  g.textCols, g.circles = {}, 0
+  g.right, g.rightWhat, g.clips = 0, nil, {}
   g.cx, g.cy, g.lastX, g.lastY, g.lastW, g.lastH = 0, 0, 0, 0, 0, 0
 end
 resetFrame()
@@ -38,8 +40,11 @@ local consts = { "Col_Text", "Col_TextDisabled", "Col_WindowBg", "Col_ChildBg", 
   "Col_TitleBgCollapsed", "Col_Button", "Col_ButtonHovered", "Col_ButtonActive", "Col_CheckMark",
   "Col_SliderGrab", "Col_SliderGrabActive", "Col_Separator", "Col_ScrollbarBg", "Col_ScrollbarGrab",
   "Col_ScrollbarGrabHovered", "Col_ScrollbarGrabActive", "Cond_FirstUseEver", "Key_Escape", "Key_Enter",
-  "FontFlags_Bold" }
+  "FontFlags_Bold", "Col_NavHighlight", "Col_MenuBarBg", "Col_Header", "Col_HeaderHovered",
+  "Col_HeaderActive", "Col_ResizeGrip", "Col_ResizeGripHovered", "Col_ResizeGripActive", "Col_Tab",
+  "Col_TabHovered", "StyleVar_FrameBorderSize" }
 for i, k in ipairs(consts) do ImGui[k] = i end
+ImGui.ConfigFlags_NavEnableKeyboard = 1   -- a bit, as in ReaImGui
 
 local function num(v, what)
   if type(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then
@@ -62,7 +67,10 @@ local function item(w, h)
   g.cx = g.lineX
 end
 
-function ImGui.CreateContext(name) return { name = name } end
+-- ImGui_Context ctx = CreateContext(string label, optional integer config_flags)
+function ImGui.CreateContext(name, flags) g.configFlags = flags; return { name = name } end
+-- bool IsMouseClicked(ctx, integer button, optional bool repeat)
+function ImGui.IsMouseClicked(_, b) num(b, "mouse button"); return g.mouseClicked == true end
 function ImGui.CreateFont(family, size, flags)
   if type(family) ~= "string" then error("CreateFont needs a family") end
   num(size, "font size")
@@ -86,6 +94,7 @@ function ImGui.SetNextWindowBgAlpha(_, a)
   g.bgAlpha = a
 end
 function ImGui.Begin(_, name, open)
+  g.title = name
   g.windowDepth = g.windowDepth + 1
   g.windowBg = effective(ImGui.Col_WindowBg)
   g.cx, g.cy, g.lineX = 10, 30, 10
@@ -139,17 +148,23 @@ function ImGui.PushStyleColor(_, idx, col)
   if col % 256 == 0 then error("style colour must be opaque") end
   g.colStack[#g.colStack + 1] = { idx = idx, col = col }
   g.colDepth = g.colDepth + 1
+  if idx == ImGui.Col_NavHighlight then g.navRing = col end
 end
 function ImGui.PopStyleColor(_, n)
   for _ = 1, (n or 1) do g.colStack[#g.colStack] = nil end
   g.colDepth = g.colDepth - (n or 1)
   if g.colDepth < 0 then error("PopStyleColor without a push") end
 end
+-- How far right anything reached this frame, and what (the no-overflow check).
+local function reach(x2, what)
+  if x2 > g.right then g.right, g.rightWhat = x2, what end
+end
 local function press(label, w, h, invisible)
   g.buttons[#g.buttons + 1] = label
   g.ink[#g.buttons] = { bg = effective(ImGui.Col_Button), text = effective(ImGui.Col_Text), invisible = invisible,
                         disabled = g.disabled > 0 }
   item(w > 0 and w or #label * 7 + 16, h > 0 and h or 20)
+  if not invisible then reach(g.lastX + g.lastW, "the " .. label .. " button") end
   if g.clickTarget == #g.buttons then
     g.clicked = label
     return g.disabled == 0
@@ -170,7 +185,7 @@ end
 function ImGui.Checkbox(_, label, v)
   if type(v) ~= "boolean" then error("Checkbox value is a " .. type(v)) end
   item(100, 20)
-  if g.toggle then return true, not v end
+  if g.toggle or g.toggleOnly == label then return true, not v end
   return false, v
 end
 function ImGui.SliderInt(_, label, v, lo, hi)
@@ -198,7 +213,8 @@ function ImGui.CalcTextSize(_, s)
   if type(s) ~= "string" then error("CalcTextSize got a " .. type(s)) end
   return #s * 7, 13
 end
-function ImGui.GetContentRegionAvail() return 900, 620 end
+-- The window is 920 wide (10 either side) unless a test narrows it (g.avail).
+function ImGui.GetContentRegionAvail() return g.avail or 900, 620 end
 function ImGui.GetCursorScreenPos() return g.cx, g.cy end
 function ImGui.SetCursorScreenPos(_, x, y)
   num(x, "cursor x"); num(y, "cursor y")
@@ -207,7 +223,7 @@ function ImGui.SetCursorScreenPos(_, x, y)
 end
 function ImGui.GetMousePos() return g.mouse[1], g.mouse[2] end
 function ImGui.GetWindowPos() return 0, 0 end
-function ImGui.GetWindowSize() return 920, 780 end
+function ImGui.GetWindowSize() return (g.avail or 900) + 20, 780 end
 function ImGui.SetClipboardText(_, s)
   if type(s) ~= "string" then error("clipboard text is a " .. type(s)) end
   g.clipboard = s
@@ -239,15 +255,23 @@ end)
 drawCall("DrawList_AddRectFilledMultiColor", 4, nil, function(a) for i = 5, 8 do colour(a[i], "corner colour") end end)
 drawCall("DrawList_AddLine", 4, 5)
 drawCall("DrawList_AddCircle", 3, 4, function(a) if a[3] < 0 then error("negative radius") end end)
-drawCall("DrawList_AddCircleFilled", 3, 4, function(a) if a[3] < 0 then error("negative radius") end end)
+drawCall("DrawList_AddCircleFilled", 3, 4, function(a)
+  if a[3] < 0 then error("negative radius") end
+  g.circles = g.circles + 1
+end)
 drawCall("DrawList_AddTriangleFilled", 6, 7)
 drawCall("DrawList_AddQuadFilled", 8, 9)
 drawCall("DrawList_PathClear", 0)
 drawCall("DrawList_PathArcTo", 5)
 drawCall("DrawList_PathStroke", 0, 1, function(a) num(a[3], "path thickness") end)
 drawCall("DrawList_PathFillConvex", 0, 1)
-drawCall("DrawList_PushClipRect", 4)
-drawCall("DrawList_PopClipRect", 0)
+-- A clip rect: what is drawn past its right edge is not seen (the pass's
+-- track scrolls sideways inside one).
+drawCall("DrawList_PushClipRect", 4, nil, function(a) g.clips[#g.clips + 1] = a[3] end)
+drawCall("DrawList_PopClipRect", 0, nil, function()
+  if #g.clips == 0 then error("PopClipRect without a push") end
+  g.clips[#g.clips] = nil
+end)
 ImGui.DrawList_AddTextEx = function(dl, font, size, x, y, col, text)
   if dl ~= DL then error("AddTextEx without a draw list") end
   if type(font) ~= "table" or not font.font or not font.attached then error("AddTextEx with a font that isn't attached") end
@@ -255,8 +279,51 @@ ImGui.DrawList_AddTextEx = function(dl, font, size, x, y, col, text)
   if size <= 0 then error("text size " .. size) end
   if type(text) ~= "string" then error("AddTextEx text is a " .. type(text)) end
   g.texts[#g.texts + 1] = text
+  g.textCols[#g.texts] = col
   g.draws = g.draws + 1
+  -- As the HIG mock's CalcTextSize measures: about half the size a letter.
+  local x2, clip = x + #text * size * 0.55, g.clips[#g.clips]
+  if clip then x2 = math.min(x2, clip) end
+  if not clip or x < clip then reach(x2, '"' .. text .. '"') end
 end
+-- 1.2: the window's size, the text size's style variables and the keyboard.
+ImGui.WindowFlags_HorizontalScrollbar = 2048
+-- void SetNextWindowSizeConstraints(ctx, number size_min_w, number size_min_h,
+--   number size_max_w, number size_max_h, optional ImGui_Function custom_callback)
+function ImGui.SetNextWindowSizeConstraints(_, w1, h1, w2, h2)
+  num(w1, "min width"); num(h1, "min height"); num(w2, "max width"); num(h2, "max height")
+  g.minW, g.minH = w1, h1
+end
+-- void PushStyleVar(ctx, integer var_idx, number val1, optional number val2)
+function ImGui.PushStyleVar(_, idx, a, b)
+  num(idx, "style var"); num(a, "style var value")
+  if b ~= nil then num(b, "style var value") end
+  g.varDepth = (g.varDepth or 0) + 1
+end
+-- void PopStyleVar(ctx, optional integer count)
+function ImGui.PopStyleVar(_, n)
+  g.varDepth = (g.varDepth or 0) - (n or 1)
+  if g.varDepth < 0 then error("PopStyleVar without a push") end
+end
+-- bool IsPopupOpen(ctx, string str_id, optional integer flags)
+ImGui.PopupFlags_AnyPopupId = 1024
+function ImGui.IsPopupOpen(_, id, flags)
+  if type(id) ~= "string" then error("IsPopupOpen needs a string id") end
+  return g.popupOpen == true
+end
+-- bool IsItemFocused(ctx); bool IsAnyItemFocused(ctx)
+function ImGui.IsItemFocused() return g.focused == true end
+function ImGui.IsAnyItemFocused() return g.focused == true end
+-- void TextWrapped(ctx, string text)
+function ImGui.TextWrapped(_, s)
+  if type(s) ~= "string" then error("TextWrapped got a " .. type(s)) end
+  g.texts[#g.texts + 1] = s
+  item(#s * 7, 13)
+end
+
+-- Apple's Human Interface Guidelines: the family's shared checks (0018).
+local HIG = dofile(HERE .. "/hig_mock.lua")(ImGui)
+
 setmetatable(ImGui, { __index = function(_, k)
   error("the script called ImGui." .. tostring(k) .. ", which the mock does not have")
 end })
@@ -325,7 +392,7 @@ local function has(list, text)
   return false
 end
 -- The n-th button called `label`; failing that, the n-th starting with it
--- ("2,500 coins", "Set tempo 97").
+-- ("Buy for 2,500 Coins", "Set tempo 97").
 local function buttonIndex(label, nth)
   for _, exact in ipairs({ true, false }) do
     local seen = 0
@@ -381,7 +448,7 @@ end
 -- Past the welcome (it waits until its text has faded in) and the check-in.
 local function welcomed()
   frames(20)
-  click("Let's go")
+  click("Let's Go")
   frames(3)
   closeModals()
 end
@@ -398,11 +465,11 @@ for _, tab in ipairs({ "Pass", "Quests", "Shop", "Gear", "Loot", "Ideas", "Troph
 end
 ok(has(g.texts, "DAW BATTLE PASS"), "a new player is welcomed")
 frames(20)
-ok(present("Let's go"), "the welcome ends with a button")
-click("Let's go")
+ok(present("Let's Go"), "the welcome ends with a button")
+click("Let's Go")
 frames(5)
-ok(present("Check in"), "then the daily check-in")
-click("Check in")
+ok(present("Check In"), "then the daily check-in")
+click("Check In")
 frames(15)
 ok(has(g.texts, "1 day streak"), "checking in starts a streak")
 click("Collect")
@@ -552,34 +619,34 @@ eq(#P.tracks, before + 1, "with no track selected, Insert MIDI makes one")
 ok(#P.tracks[#P.tracks].items[1].take.notes > 0, "and fills it with notes")
 eq(P.undoDepth, 0, "as a closed undo step")
 click("All")
-click("Add regions")
+click("Add Regions")
 ok(#P.markers > 3, "an arrangement adds its regions")
-click("Set tempo")
+click("Set Tempo")
 ok(P.bpmSet ~= nil, "a seed sets the tempo")
 click("Star")
 ok(buttonIndex("Starred") ~= nil, "an idea can be starred")
 click("Song Title")
 eq(buttonIndex("Delete") ~= nil, true, "the one song title is shown")
 click("Delete")
-ok(buttonIndex("Sure?") ~= nil, "deleting asks first")
-click("Sure?")
+ok(buttonIndex("Click Again to") ~= nil, "deleting asks first")
+click("Click Again to")
 frame()
 eq(buttonIndex("Delete"), nil, "and then deletes")
 click("All")
 
 click("Shop")
 frames(2)
-local buyAt = buttonIndex("2,500 coins")
+local buyAt = buttonIndex("Buy for 2,500 Coins")
 ok(buyAt ~= nil, "the takeaway pass is in the shop")
 frame(buyAt)
 frame()
-click("Sure?")
+click("Click Again to")
 frames(10)
 closeModals()   -- the purchase's achievement may have levelled us up
 click("Loot")
 ok(buttonIndex("Redeem") ~= nil, "the takeaway pass is in the inventory")
 click("Redeem")
-click("Sure?")
+click("Click Again to")
 frames(20)
 ok(has(g.texts, "ENJOY YOUR TAKEAWAY!"), "redeeming a takeaway pass is celebrated")
 click("Done")
@@ -595,6 +662,35 @@ frame()
 ok(buttonIndex("Equip") ~= nil, "a chosen item can be equipped")
 click("Equip")
 frames(3)
+
+-- A toast stays until it is dismissed (decision 0018): Apple asks for nothing
+-- that goes away on a timer.
+-- "Equipped" is the Gear page's heading too; the toast is the second.
+local function equippedShown()
+  local n = 0
+  for _, t in ipairs(g.texts) do if t == "Equipped" then n = n + 1 end end
+  return n
+end
+eq(equippedShown(), 2, "equipping says so")
+frames(600, 0.1)
+eq(equippedShown(), 2, "and the toast is still there a minute later")
+-- The toast's place: the window's top right, 120 down (the mock's window is
+-- 920 wide at 0, 0).
+g.mouse, g.mouseClicked = { 700, 140 }, true
+frame()
+g.mouseClicked = false
+g.mouse = { 100, 100 }
+frame()
+eq(equippedShown(), 1, "a click on it takes it away")
+frame(stashAt)
+frame()
+click("Equip")
+frames(3)
+eq(equippedShown(), 2, "equipping again says so again")
+g.keys[ImGui.Key_Escape] = true
+frame()
+frame()
+eq(equippedShown(), 1, "and Esc takes it away too")
 
 -- Every button again, in the rich state.
 for _, tab in ipairs(TAB_NAMES) do
@@ -666,6 +762,221 @@ frame()
 closeModals()
 click("Pass")
 ok(has(g.texts, "Tier 1 / 100"), "a damaged save falls back to the backup")
+
+------------------------------------------------------------------------------
+-- Apple's Human Interface Guidelines (decision 0018)
+------------------------------------------------------------------------------
+
+local function startOver()
+  fresh()
+  welcomed()
+end
+
+local function luminance(col)
+  local function ch(v)
+    v = v / 255
+    return v <= 0.03928 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4
+  end
+  return 0.2126 * ch(math.floor(col / 16777216) % 256) + 0.7152 * ch(math.floor(col / 65536) % 256)
+         + 0.0722 * ch(math.floor(col / 256) % 256)
+end
+local function contrast(a, b)
+  local la, lb = luminance(a), luminance(b)
+  return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05)
+end
+
+do
+  startOver()
+  ok(g.configFlags and g.configFlags & ImGui.ConfigFlags_NavEnableKeyboard ~= 0,
+     "the keyboard alone can move through the window: keyboard navigation is on")
+  ok(g.navRing and g.navRing ~= 0xFFF200FF and contrast(g.navRing, 0x23272EFF) >= 3,
+     "the focus ring has its own colour, not the accent, 3:1 on the ground")
+
+  -- Every opaque word on every page is 7:1 on the ground (INK is on buttons).
+  local worst, which = 99, nil
+  for _, tab in ipairs(TAB_NAMES) do
+    click(tab)
+    frames(2)
+    for i, text in ipairs(g.texts) do
+      local col = g.textCols[i]
+      if col and col % 256 == 255 and col ~= INK then
+        local c = contrast(col, 0x23272EFF)
+        if c < worst then worst, which = c, ("%s on %s (%08X)"):format(text, tab, col) end
+      end
+    end
+  end
+  ok(worst >= 7, ("every word is 7:1 on the ground (lowest %.2f: %s)"):format(worst, tostring(which)))
+end
+
+-- Reduce Motion: opening the same crate makes no sparks.
+local function crateCircles(calm)
+  startOver()
+  if calm then
+    click("Stats")
+    g.toggleOnly = "Reduce Motion"
+    frame()
+    g.toggleOnly = nil
+    frame()
+  end
+  click("Loot")
+  frame(buttonIndex("Open", 3))
+  frames(2)
+  frame(buttonIndex("##crate"))
+  local most = 0
+  for _ = 1, 35 do frame(); most = math.max(most, g.circles) end
+  return most
+end
+do
+  local moving, still = crateCircles(false), crateCircles(true)
+  ok(moving > 60, "a crate bursts in sparks: " .. moving .. " circles at most in a frame")
+  ok(still < 30, "with Reduce Motion, none: " .. still)
+  atexitFn()
+  local saved = io.open(P.resource .. "/Data/DAW Battle Pass/progress.lua"):read("a")
+  ok(saved:find("reduceMotion=true", 1, true) ~= nil, "Reduce Motion is saved")
+end
+
+------------------------------------------------------------------------------
+-- The final sweep of Apple's Foundations (0018, 21 October 2026)
+------------------------------------------------------------------------------
+
+local SAVE = function() return P.resource .. "/Data/DAW Battle Pass/progress.lua" end
+local function readSave()
+  local f = io.open(SAVE(), "rb")
+  if not f then return "" end
+  local t = f:read("a")
+  f:close()
+  return t
+end
+
+-- The family's checks: 13-point text, 28-point controls 12 apart, the ring,
+-- every word 7:1, the ink bar, and Text Size from the View menu and the keys,
+-- remembered and clamped. The setting is saved inside the progress file.
+HIG.check({
+  ok = ok, eq = eq, frame = function() frame() end,
+  loaded = function() startOver(); click("Stats"); frame() end,
+  quit = function() atexitFn() end,
+  restart = function() start(); frame() end,
+  saved = function() return readSave() end,
+  setSaved = function(v)
+    if v == "" then return end
+    local t = readSave():gsub("textSize=%d+", v)
+    local f = io.open(SAVE(), "wb"); f:write(t); f:close()
+  end,
+  sizeKey = "textSize",
+})
+local function textSize(label) HIG.menuFrame({ frame = function() frame() end }, label) end
+
+do
+  startOver()
+  click("Quests")
+  ok(g.title:find("^DAW Battle Pass \u{2014} Quests###") ~= nil, "the title names the page: " .. g.title)
+  click("Loot")
+  frame(buttonIndex("Open", 3))
+  frames(2)
+  ok(g.title:find("Reward###", 1, true) ~= nil, "or the celebration in front of it: " .. g.title)
+  closeModals()
+  eq(g.minW, 420, "the window can be made no narrower than its tabs need")
+  textSize("Text Size 200%")
+  eq(g.minW, 840, "and that grows with the text")
+  textSize("Text Size 100%")
+end
+
+local function rich()
+  P.reset()
+  P.resource = tmp .. "/resource"
+  os.execute('rm -rf "' .. P.resource .. '"')
+  clock.epoch = EPOCH
+  seedRichSave()
+  start()
+  frame()
+  closeModals()
+end
+
+-- Nothing runs off the window's edge: every page, the welcome and a crate
+-- opening, at 100% and 200%, in a roomy window and the smallest one.
+do
+  local function noOverflow(where)
+    ok(g.right <= 10 + (g.avail or 900) + 1,
+       ("nothing past the window's edge (%s): %s reaches %.0f of %d"):format(where, tostring(g.rightWhat),
+         g.right, 10 + (g.avail or 900)))
+  end
+  for _, size in ipairs({ 100, 200 }) do
+    local k = size / 100
+    for _, width in ipairs({ 900, 420 * k - 20 }) do
+      fresh()
+      textSize("Text Size " .. size .. "%")
+      g.avail = width
+      frames(20)
+      noOverflow(size .. "%, " .. width .. " wide, the welcome")
+      click("Let's Go")
+      frames(3)
+      closeModals()
+      atexitFn()
+      g.avail = nil
+      rich()
+      textSize("Text Size " .. size .. "%")
+      g.avail = width
+      for _, tab in ipairs(TAB_NAMES) do
+        click(tab)
+        frames(2)
+        noOverflow(size .. "%, " .. width .. " wide, " .. tab)
+      end
+      ok(HIG.font and HIG.font.size == 13 * k, "the pages were drawn at " .. size .. "%")
+      click("Loot")
+      frame(buttonIndex("Open", 3))
+      frames(2)
+      frame(buttonIndex("##crate"))
+      for _ = 1, 40 do frame() end
+      noOverflow(size .. "%, " .. width .. " wide, a crate opened")
+      closeModals()
+      g.avail = nil
+      textSize("Text Size 100%")
+      atexitFn()
+    end
+  end
+end
+
+-- "Click Again to ..." waits for the second click as long as it takes: no
+-- timer (it used to give up after three seconds).
+do
+  rich()
+  click("Shop")
+  frames(2)
+  frame(buttonIndex("Buy for 2,500 Coins"))
+  frames(600, 0.1)
+  ok(buttonIndex("Click Again to Buy") ~= nil, "a minute later the button still asks")
+  -- Esc lets go of the keyboard's place, or a menu, before anything else.
+  g.focused = true
+  g.keys[ImGui.Key_Escape] = true
+  frames(2)
+  g.focused = false
+  ok(buttonIndex("Click Again to Buy") ~= nil, "Esc with a control focused lets go of it, and the button still asks")
+  g.popupOpen = true
+  g.keys[ImGui.Key_Escape] = true
+  frames(2)
+  g.popupOpen = false
+  ok(buttonIndex("Click Again to Buy") ~= nil, "Esc with a menu open closes only the menu")
+  g.keys[ImGui.Key_Escape] = true
+  frames(2)
+  ok(buttonIndex("Click Again to Buy") == nil, "until Esc lets it go")
+end
+
+-- Every colour the theme pushes is a blue-shifted grey (R < G < B) but the
+-- accent; and the menus are a step lighter than the window, keys 7:1 on them.
+do
+  local src = io.open(SCRIPT, "rb"):read("a")
+  local theme = src:match("local THEME = (%b{})")
+  local bad
+  for name, hex in theme:gmatch('"(Col_[%w_]+)",%s*0x(%x%x%x%x%x%x)') do
+    local r, gg, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+    if hex ~= "FFF200" and not (r < gg and gg < b) then bad = bad or (name .. " #" .. hex) end
+  end
+  ok(theme and not bad, "every theme colour is a blue-shifted grey, R < G < B: " .. tostring(bad))
+  local function themed(name) return tonumber(theme:match('"' .. name .. '",%s*0x(%x+)'), 16) end
+  eq(themed("Col_PopupBg"), 0x2A2F37FF, "menus and tooltips are a step lighter than the window")
+  ok(contrast(themed("Col_TextDisabled"), themed("Col_PopupBg")) >= 7, "the menu's keys are 7:1 on it")
+  ok(contrast(themed("Col_ScrollbarGrab"), themed("Col_ScrollbarBg")) >= 3, "the scrollbar's grab is 3:1 on its track")
+end
 
 -- Closing the window stops the script.
 g.closeWindow = true

@@ -169,7 +169,10 @@ function G.newState(epoch)
     log = {},
     recent = {},
     shop = { day = "", deals = {} },
-    settings = { idle = G.IDLE_SECONDS, welcome = false, autostart = false },
+    -- reduceMotion: Apple's Reduce Motion, chosen here because a script
+    -- cannot read the system's (decision 0018).
+    settings = { idle = G.IDLE_SECONDS, welcome = false, autostart = false, reduceMotion = false,
+                 textSize = 1 },   -- 1-4: 100, 125, 150, 200% (the window clamps it)
   }
 end
 

@@ -34,6 +34,24 @@
         <source file="bp_fx.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/a80f562544b4610290dfaf763d8015834457b326/reascripts/bp_fx.lua</source>
         <source file="bp_watch.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/a80f562544b4610290dfaf763d8015834457b326/reascripts/bp_watch.lua</source>
       </version>
+      <version name="1.1" author="kallums" time="2026-10-15T18:00:00Z">
+        <changelog><![CDATA[Follows Apple's design guidelines for Mac apps where a game board can: Reduce Motion on the Stats page turns off the sparks, confetti, shaking, flashing and bouncing; messages in the corner stay until you click them or press Esc; the keyboard alone can move round the window and click (Tab, arrows, Space); and every word is easier to read, with rarity names in a lighter shade of their colour.]]></changelog>
+        <source main="main" file="DAW Battle Pass.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/f92c1d2134b65bf4769bc553b8949f969526dcf5/reascripts/DAW%20Battle%20Pass.lua</source>
+        <source file="bp_theory.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/f92c1d2134b65bf4769bc553b8949f969526dcf5/reascripts/bp_theory.lua</source>
+        <source file="bp_loot.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/f92c1d2134b65bf4769bc553b8949f969526dcf5/reascripts/bp_loot.lua</source>
+        <source file="bp_game.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/f92c1d2134b65bf4769bc553b8949f969526dcf5/reascripts/bp_game.lua</source>
+        <source file="bp_fx.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/f92c1d2134b65bf4769bc553b8949f969526dcf5/reascripts/bp_fx.lua</source>
+        <source file="bp_watch.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/f92c1d2134b65bf4769bc553b8949f969526dcf5/reascripts/bp_watch.lua</source>
+      </version>
+      <version name="1.2" author="kallums" time="2026-10-22T12:00:00Z">
+        <changelog><![CDATA[Bigger text: View > Text Size (or Cmd+= and Cmd+-) makes everything up to twice the size - pages, celebrations and messages grow together. Taller, evenly spaced buttons; rows wrap in a narrow window. Buy, Salvage, Redeem and Delete now say "Click Again to ..." and wait as long as you like. Esc lets go of the keyboard's place or a menu first. Lighter menus, clearer edges, and the title says which page you are on.]]></changelog>
+        <source main="main" file="DAW Battle Pass.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/1290e2ab905900350d6846a26e106bcbae26e17c/reascripts/DAW%20Battle%20Pass.lua</source>
+        <source file="bp_theory.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/1290e2ab905900350d6846a26e106bcbae26e17c/reascripts/bp_theory.lua</source>
+        <source file="bp_loot.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/1290e2ab905900350d6846a26e106bcbae26e17c/reascripts/bp_loot.lua</source>
+        <source file="bp_game.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/1290e2ab905900350d6846a26e106bcbae26e17c/reascripts/bp_game.lua</source>
+        <source file="bp_fx.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/1290e2ab905900350d6846a26e106bcbae26e17c/reascripts/bp_fx.lua</source>
+        <source file="bp_watch.lua">https://raw.githubusercontent.com/KallumS/DAW-Battle-Pass/1290e2ab905900350d6846a26e106bcbae26e17c/reascripts/bp_watch.lua</source>
+      </version>
     </reapack>
 
   </category>
