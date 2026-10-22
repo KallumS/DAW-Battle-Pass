@@ -213,6 +213,11 @@ make-up and clothes (her words), which she can edit in the app
 - **The container can't compile it.** `.github/workflows/writer-mac.yml`
   (macOS 15, Apple silicon) runs `swift test`, builds the `.app`, draws every
   page with `--snapshots`, and uploads the zip and the PNGs. Read the run.
+  Artifacts can't be downloaded from the container, but job logs can:
+  the snapshots are also printed into the log as base64 JPEGs
+  (`SNAP-BEGIN name` ... `SNAP-END name`) - decode and look at them.
+- A push trigger that lists `tags:` must also list `branches:`, or branch
+  pushes never build (that cost half an hour on day one).
 - Typing is counted, never recorded
   ([0019](docs/decisions/0019-typing-is-counted-never-recorded.md)); a letter
   is 0.1 XP, capped a minute

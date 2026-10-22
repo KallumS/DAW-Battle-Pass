@@ -86,7 +86,8 @@ struct HScroll<Content: View>: View {
   @ViewBuilder let content: Content
   var body: some View {
     if snapshot {
-      HStack(spacing: 0) { content; Spacer(minLength: 0) }.clipped()
+      // Takes the width it's offered and clips the rest, as a scroller would.
+      HStack(spacing: 0) { content }.frame(maxWidth: .infinity, alignment: .leading).clipped()
     } else {
       ScrollView(.horizontal, showsIndicators: true) { content }
     }
