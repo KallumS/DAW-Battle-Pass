@@ -92,6 +92,20 @@ public func plural(_ w: String) -> String {
   return w + "s"
 }
 
+/// Joins clauses into sentences: ". " between them, except after a quote
+/// that already ends with its own full stop, question or exclamation mark.
+public func sentences(_ parts: [String]) -> String {
+  var out = ""
+  for (i, p) in parts.enumerated() {
+    if i > 0 {
+      let ended = out.hasSuffix(".\u{201D}") || out.hasSuffix("?\u{201D}") || out.hasSuffix("!\u{201D}")
+      out += ended ? " " : ". "
+    }
+    out += p
+  }
+  return out
+}
+
 /// The first letter in capitals.
 public func cap(_ s: String) -> String { s.prefix(1).uppercased() + s.dropFirst() }
 

@@ -103,6 +103,11 @@ enum W {
     "Frankie", "Theo", "Felix", "Jonah", "Rafe", "Kit", "Hugo", "Sol", "Arlo", "Ezra",
     "Benedict", "Malik", "Luca", "Ines", "Yara", "Clemence", "Odette", "Marguerite", "Tallulah"]
 
+  /// For blurbs, whose heroine is "she".
+  static let herNames = ["Margot", "Iris", "Delphine", "Nell", "Ottilie", "Rosa", "Harriet", "Cleo",
+    "June", "Vivian", "Esme", "Bea", "Saoirse", "Imogen", "Priya", "Lena", "Maud", "Frankie",
+    "Ines", "Yara", "Clemence", "Odette", "Marguerite", "Tallulah"]
+
   static let surnames = ["Ashworth", "Blackwood", "Vale", "Okafor", "Lindqvist", "Marchetti",
     "Fairfax", "Holloway", "Nakamura", "Quill", "Devereux", "Pemberton", "Castell", "Moreau",
     "Whitlock", "Achebe", "Sinclair", "Hartley", "Bellamy", "Rosewood", "Calloway", "Laurent"]
@@ -113,16 +118,16 @@ enum W {
     "estate agent", "librarian", "marine biologist", "fashion editor", "con artist", "nurse",
     "vicar", "bridal seamstress", "private detective", "sommelier"]
 
-  static let wants = ["wants to be forgiven", "wants her old life back", "wants to win at any cost",
-    "wants to be left alone", "wants to find her real father", "wants revenge, politely",
+  static let wants = ["wants to be forgiven", "wants the old life back", "wants to win at any cost",
+    "wants to be left alone", "wants to find out who the real father is", "wants revenge, politely",
     "wants one perfect day", "wants to be taken seriously", "wants to leave town for good",
     "wants the truth, whatever it costs", "wants to fall in love before forty",
     "wants to buy back the family house"]
 
-  static let secrets = ["has never told anyone she can't swim", "is secretly married",
+  static let secrets = ["can't swim, and has never told a soul", "is secretly married",
     "wrote the anonymous letters", "has a twin nobody knows about", "once stole a painting",
-    "faked her own death once", "is in love with her best friend's husband",
-    "has been living under a false name", "still writes to her dead mother",
+    "once faked a death", "is in love with the best friend's husband",
+    "has been living under a false name", "still writes letters to a dead mother",
     "knows who started the fire", "won the lottery and told no one"]
 
   static let flaws = ["proud", "jealous", "reckless", "a beautiful liar", "too kind", "cowardly",
@@ -130,11 +135,11 @@ enum W {
 
   static let quirks = ["speaks in questions when nervous", "quotes old films",
     "always wears red lipstick", "collects other people's keys", "hums when lying",
-    "never finishes a cup of tea", "counts everything", "names her houseplants",
+    "never finishes a cup of tea", "counts everything", "names every houseplant",
     "only reads the last page first", "keeps a lipstick in every coat pocket"]
 
-  static let needs = ["to let someone help her", "to forgive herself", "to tell the truth",
-    "to stop running", "to be loved as she is", "to let the past go", "to ask for what she wants"]
+  static let needs = ["to accept some help", "to forgive and be forgiven", "to tell the truth",
+    "to stop running", "to be loved exactly as they are", "to let the past go", "to stop apologising"]
 
   // Places --------------------------------------------------------------------
 

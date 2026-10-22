@@ -14,6 +14,9 @@ you open.
 Built in the same shape and colours as Good Idea, Midi Catalogue, Starting
 Blocks and ScaleView.
 
+**Not a REAPER user?** [`writer/`](writer/README.md) holds **Writing Battle
+Pass**, the same game for writing, as a Mac app.
+
 ## Installing
 
 You need **ReaImGui**, the extension your other scripts already use. If you

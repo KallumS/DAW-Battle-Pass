@@ -31,7 +31,7 @@ public enum Ideas {
       if r >= L { sub.append("Twist: " + d.word(W.twists)) }
       if r >= M { sub.append("Title: " + Ideas.bookTitle(d)) }
       if sub.isEmpty { sub.append("Write the opening scene") }
-      return (text, sub.joined(separator: ". "))
+      return (text, sentences(sub))
     },
     IdeaKind(id: "firstline", label: "First Line", icon: "text.quote", weight: 8) { d, r in
       if r == P { return ("\u{201C}It was a dark and stormy night.\u{201D}", "A classic. Some say too classic.") }
@@ -41,7 +41,7 @@ public enum Ideas {
       if r >= E { sub.append("In " + d.word(W.povs)) }
       if r >= L { sub.append("Last line: \u{201C}" + d.word(W.lastLines) + "\u{201D}") }
       if r >= M { sub.append("Genre: " + d.word(W.genres)) }
-      return (text, sub.joined(separator: ". "))
+      return (text, sentences(sub))
     },
     IdeaKind(id: "character", label: "Character", icon: "person.crop.circle", weight: 8) { d, r in
       if r == P { return ("Jane Doe, a person.", "Has a face. Probably.") }
@@ -57,11 +57,11 @@ public enum Ideas {
         sub.append(articles(nemesis)) }
       if r >= M { sub.append("What they need: " + d.word(W.needs)) }
       if sub.isEmpty { sub.append("Give them a scene today") }
-      return (text, sub.joined(separator: ". "))
+      return (text, sentences(sub))
     },
     IdeaKind(id: "setting", label: "Setting", icon: "map", weight: 6) { d, r in
       if r == P { return ("A room.", "It has walls. Four, roughly.") }
-      let text = cap(articles("a " + d.word(W.places) + ", " + d.word(W.times) + "."))
+      let text = cap(d.word(W.places) + ", " + d.word(W.times) + ".")
       var sub: [String] = []
       if r >= U { sub.append("Smell: " + d.word(W.smells)) }
       if r >= R { sub.append("Sound: " + d.word(W.sounds)) }
@@ -69,7 +69,7 @@ public enum Ideas {
       if r >= L { sub.append("Who walks in: " + d.word(W.narrators)) }
       if r >= M { sub.append("What happened here: " + d.word(W.subjects)) }
       if sub.isEmpty { sub.append("Describe it in one paragraph") }
-      return (text, sub.joined(separator: ". "))
+      return (text, sentences(sub))
     },
     IdeaKind(id: "twist", label: "Plot Twist", icon: "tornado", weight: 6) { d, r in
       if r == P { return ("And then they all woke up.", "Please don't.") }
@@ -79,7 +79,7 @@ public enum Ideas {
       if r >= R { sub = ["Foreshadow it with " + d.word(W.clues)] }
       if r >= E { sub.append("Reveal it at " + d.word(W.reveals)) }
       if r >= L { sub.append("Then a second twist: " + d.word(W.twists.filter { $0 != t })) }
-      return (text, sub.joined(separator: ". "))
+      return (text, sentences(sub))
     },
     IdeaKind(id: "title", label: "Book Title", icon: "book.closed", weight: 7) { d, r in
       if r == P { return ("Untitled Draft \(d.between(2, 9)) (FINAL)", "A title. Technically.") }
@@ -97,7 +97,7 @@ public enum Ideas {
       if r >= R { sub.append("Neither of them says what they mean") }
       if r >= E { sub.append("Nobody may say \u{201C}" + d.word(W.bannedWords) + "\u{201D}") }
       if r >= L { sub.append("Someone walks in at the worst possible moment") }
-      return (text, sub.joined(separator: ". "))
+      return (text, sentences(sub))
     },
     IdeaKind(id: "challenge", label: "Writing Challenge", icon: "flag", weight: 6) { d, r in
       if r == P { return ("Write something.", "Anything. Optional.") }
@@ -105,7 +105,7 @@ public enum Ideas {
       let list = Array(d.shuffled(W.constraints).prefix(n))
       var sub = "Try it in today's writing"
       if r >= E { sub = "Sprint: \(d.pick([15, 20, 25, 30])) minutes, starting now" }
-      return (list.joined(separator: ". ") + ".", sub)
+      return (sentences(list) + ".", sub)
     },
     IdeaKind(id: "poem", label: "Poem", icon: "leaf", weight: 5) { d, r in
       if r == P { return ("Roses are red, violets are blue.", "You know the rest.") }
@@ -115,7 +115,7 @@ public enum Ideas {
       var sub = [form.1]
       if r >= R { sub.append("Use the word \u{201C}" + d.pick(W.fancyWords).0 + "\u{201D}") }
       if r >= L { sub.append("End on: \u{201C}" + d.word(W.lastLines) + "\u{201D}") }
-      return (text, sub.joined(separator: ". "))
+      return (text, sentences(sub))
     },
     IdeaKind(id: "mash", label: "Genre Mash-up", icon: "atom", weight: 5) { d, r in
       if r == P { return ("Fiction x Words", "Genre-defining.") }
@@ -152,7 +152,7 @@ public enum Ideas {
     },
     IdeaKind(id: "blurb", label: "Back-Cover Blurb", icon: "text.book.closed", weight: 5) { d, r in
       if r == P { return ("A woman has a problem. She solves it.", "Bestseller material? No.") }
-      let name = d.word(W.firstNames) + " " + d.word(W.surnames)
+      let name = d.word(W.herNames) + " " + d.word(W.surnames)
       var text = "When " + name + " " + d.word(W.discoveries)
       if r >= U { text += ", she must " + d.word(W.goals) + " before " + d.word(W.stakes) + "." }
       else { text += ", everything changes." }
@@ -162,7 +162,7 @@ public enum Ideas {
       if r >= L { sub.append("Twist: " + d.word(W.twists)) }
       if r >= M { sub.append("Title: " + Ideas.bookTitle(d, fancy: true)) }
       if sub.isEmpty { sub.append("Write the first chapter") }
-      return (text, sub.joined(separator: ". "))
+      return (text, sentences(sub))
     },
   ]
 
