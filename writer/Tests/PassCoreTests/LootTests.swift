@@ -49,7 +49,7 @@ final class LootTests: XCTestCase {
           if x.type != "idea" || x.kind != k.id { flag("\(k.id): wrong type", x.text) }
           if x.text.isEmpty { flag("\(k.id) \(Rarity.name(r)): no text", "") }
           if x.sub.isEmpty { flag("\(k.id) \(Rarity.name(r)): no line under it", x.text) }
-          for bad in ["%", "{", "  ", " a a", " a e", " a i", " a o", " a u", "an a ", "a an ", "..", "\u{201D}.", "nil"] {
+          for bad in ["%", "{", "  ", " a a", " a e", " a i", " a o", " a u", "an a ", "a an ", "..", ".\u{201D}.", "nil"] {
             if (" " + x.text + " " + x.sub).lowercased().contains(bad) { flag("\(k.id): '\(bad)'", x.text + " / " + x.sub) }
           }
           if let f = x.text.first, String(f) != String(f).uppercased() { flag("\(k.id): starts lower case", x.text) }
