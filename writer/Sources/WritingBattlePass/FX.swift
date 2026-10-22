@@ -38,30 +38,37 @@ final class FXStore {
 
   func confetti(at p: CGPoint, count: Int = 60, speed: Double = 380) {
     for _ in 0..<count {
-      let a = -Double.pi / 2 + (rnd() - 0.5) * 2.2
-      let v = speed * (0.4 + rnd() * 0.8)
-      particles.append(Particle(x: p.x, y: p.y, vx: cos(a) * v, vy: sin(a) * v, life: 1.6 + rnd(), age: 0,
-                                size: 5 + rnd() * 5, colour: FXStore.confettiColours[Int(rnd() * 7) % 7],
-                                spin: (rnd() - 0.5) * 14, rect: true))
+      let a: Double = -Double.pi / 2 + (rnd() - 0.5) * 2.2
+      let v: Double = speed * (0.4 + rnd() * 0.8)
+      let life: Double = 1.6 + rnd()
+      let size: Double = 5 + rnd() * 5
+      let colour = FXStore.confettiColours[Int(rnd() * 7) % 7]
+      let spin: Double = (rnd() - 0.5) * 14
+      particles.append(Particle(x: Double(p.x), y: Double(p.y), vx: cos(a) * v, vy: sin(a) * v, life: life, age: 0,
+                                size: size, colour: colour, spin: spin, rect: true))
     }
   }
 
   func burst(at p: CGPoint, count: Int = 24, colours: [Color], speed: Double = 280, size: Double = 4) {
     for _ in 0..<count {
-      let a = rnd() * 2 * .pi
-      let v = speed * (0.3 + rnd() * 0.7)
-      particles.append(Particle(x: p.x, y: p.y, vx: cos(a) * v, vy: sin(a) * v, life: 0.6 + rnd() * 0.5, age: 0,
-                                size: size * (0.6 + rnd() * 0.8), colour: colours[Int(rnd() * Double(colours.count)) % colours.count],
-                                gravity: 120))
+      let a: Double = rnd() * 2 * .pi
+      let v: Double = speed * (0.3 + rnd() * 0.7)
+      let life: Double = 0.6 + rnd() * 0.5
+      let sz: Double = size * (0.6 + rnd() * 0.8)
+      let colour = colours[Int(rnd() * Double(colours.count)) % colours.count]
+      particles.append(Particle(x: Double(p.x), y: Double(p.y), vx: cos(a) * v, vy: sin(a) * v, life: life, age: 0,
+                                size: sz, colour: colour, gravity: 120))
     }
   }
 
   func coins(from p: CGPoint, count: Int) {
     for i in 0..<count {
-      let a = rnd() * 2 * .pi
-      let start = CGPoint(x: Double(p.x) + cos(a) * 30 * rnd(), y: Double(p.y) + sin(a) * 30 * rnd())
-      particles.append(Particle(x: start.x, y: start.y, vx: 0, vy: 0, life: 0.7 + Double(i) * 0.025, age: 0,
-                                size: 11, colour: Theme.coin, gravity: 0, target: coinPos, start: start))
+      let a: Double = rnd() * 2 * .pi
+      let sx: Double = Double(p.x) + cos(a) * 30 * rnd()
+      let sy: Double = Double(p.y) + sin(a) * 30 * rnd()
+      let life: Double = 0.7 + Double(i) * 0.025
+      particles.append(Particle(x: sx, y: sy, vx: 0, vy: 0, life: life, age: 0,
+                                size: 11, colour: Theme.coin, gravity: 0, target: coinPos, start: CGPoint(x: sx, y: sy)))
     }
   }
 
@@ -106,13 +113,14 @@ final class FXStore {
 
   func draw(_ ctx: inout GraphicsContext) {
     for r in rings {
-      let k = r.age / r.life
-      let rad = r.radius * (0.2 + 0.8 * k)
-      ctx.stroke(Path(ellipseIn: CGRect(x: r.x - rad, y: r.y - rad, width: rad * 2, height: rad * 2)),
-                 with: .color(r.colour.opacity(1 - k)), lineWidth: 3 * (1 - k) + 1)
+      let k: Double = r.age / r.life
+      let rad: Double = r.radius * (0.2 + 0.8 * k)
+      let box = CGRect(x: r.x - rad, y: r.y - rad, width: rad * 2, height: rad * 2)
+      let lw: Double = 3 * (1 - k) + 1
+      ctx.stroke(Path(ellipseIn: box), with: .color(r.colour.opacity(1 - k)), lineWidth: CGFloat(lw))
     }
     for p in particles {
-      let fade = min(1, (p.life - p.age) / 0.3)
+      let fade: Double = min(1, (p.life - p.age) / 0.3)
       if p.target != nil {
         let rect = CGRect(x: p.x - p.size / 2, y: p.y - p.size / 2, width: p.size, height: p.size)
         ctx.fill(Path(ellipseIn: rect), with: .color(Theme.coin))

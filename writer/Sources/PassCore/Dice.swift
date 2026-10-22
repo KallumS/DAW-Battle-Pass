@@ -24,6 +24,10 @@ public final class Dice {
 
   public func chance(_ p: Double) -> Bool { next() < p }
 
+  /// One word from a word list (not generic, so long sentences built from
+  /// many picks type-check quickly).
+  public func word(_ list: [String]) -> String { pick(list) }
+
   public func pick<T>(_ list: [T]) -> T {
     list[min(list.count - 1, Int(next() * Double(list.count)))]
   }
@@ -90,3 +94,6 @@ public func plural(_ w: String) -> String {
 
 /// The first letter in capitals.
 public func cap(_ s: String) -> String { s.prefix(1).uppercased() + s.dropFirst() }
+
+/// Rounds half up to a whole number, as Lua's math.floor(x + 0.5) did.
+public func roundHalf(_ x: Double) -> Int { Int((x + 0.5).rounded(.down)) }

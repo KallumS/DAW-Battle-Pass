@@ -330,8 +330,10 @@ struct BannerPattern: Shape {
       }
     case "dots":
       for i in 0..<3 { for j in 0..<3 {
-        let s = r.width * 0.16
-        p.addEllipse(in: CGRect(x: r.minX + r.width * (0.17 + 0.33 * CGFloat(i)) - s / 2, y: r.minY + r.height * (0.17 + 0.33 * CGFloat(j)) - s / 2, width: s, height: s))
+        let s: CGFloat = r.width * 0.16
+        let fx: CGFloat = 0.17 + 0.33 * CGFloat(i), fy: CGFloat = 0.17 + 0.33 * CGFloat(j)
+        let x: CGFloat = r.minX + r.width * fx - s / 2, y: CGFloat = r.minY + r.height * fy - s / 2
+        p.addEllipse(in: CGRect(x: x, y: y, width: s, height: s))
       } }
     default: break
     }

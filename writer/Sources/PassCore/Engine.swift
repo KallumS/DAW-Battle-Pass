@@ -127,10 +127,11 @@ public final class Engine {
   /// Coins found (not refunds or sales) get the coin bonus and Midas Touch.
   @discardableResult
   public func addCoins(_ amount: Double, found: Bool) -> Int {
-    var n = Int((amount + 0.5).rounded(.down))
+    var n = roundHalf(amount)
     if n <= 0 { return 0 }
     if found {
-      n = Int((Double(n) * (1 + bonus("coins") / 100) + 0.5).rounded(.down))
+      let mult: Double = 1 + bonus("coins") / 100
+      n = roundHalf(Double(n) * mult)
       if hasPower("midas") && ss.rnd.next() < 0.10 {
         n *= 2
         notice(Notice(.toast, text: "Midas Touch!", sub: "Coins doubled", icon: "coin", rarity: 6))

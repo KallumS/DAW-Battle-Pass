@@ -63,7 +63,7 @@ extension Engine {
       let r = Rarity.roll(d, Rarity.rare, Rarity.legendary)
       let drop = Loot.drop(d, r, pool: "deal", ilvl: st.level)
       let price = Double(Rules.dealPrice[r] ?? 500) * (drop.type == "gear" ? 1 : 0.6)
-      deals.append(Deal(drop: drop, price: Int((price + 0.5).rounded(.down))))
+      deals.append(Deal(drop: drop, price: roundHalf(price)))
     }
     st.shop = ShopState(day: day, deals: deals)
   }

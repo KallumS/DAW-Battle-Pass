@@ -13,12 +13,12 @@ extension Engine {
     var q = Quest(kind: tpl.kind, text: tpl.text.replacingOccurrences(of: "%d", with: String(target)),
                   target: Double(target) * tpl.unit, scope: scope, unit: tpl.unit)
     if scope == "daily" {
-      q.coins = Int((40 + diff * 50 + 0.5).rounded(.down))
-      q.xp = Int((80 + diff * 80 + 0.5).rounded(.down))
+      q.coins = roundHalf(40 + diff * 50)
+      q.xp = roundHalf(80 + diff * 80)
       q.rarity = diff > 0.66 ? 4 : 3
     } else {
-      q.coins = Int((250 + diff * 200 + 0.5).rounded(.down))
-      q.xp = Int((500 + diff * 400 + 0.5).rounded(.down))
+      q.coins = roundHalf(250 + diff * 200)
+      q.xp = roundHalf(500 + diff * 400)
       q.crate = 4
       q.rarity = diff > 0.66 ? 6 : 5
     }

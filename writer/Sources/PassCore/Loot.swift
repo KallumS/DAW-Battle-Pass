@@ -90,7 +90,7 @@ public enum Loot {
 
   public static func seasonName(_ id: Int) -> String {
     let d = Dice(seedOf("season", id))
-    return d.pick(W.seasonAdj) + " " + d.pick(W.seasonNoun)
+    return d.word(W.seasonAdj) + " " + d.word(W.seasonNoun)
   }
 
   /// "big" tiers are each hour's; "milestone" every tenth; "legendary" every

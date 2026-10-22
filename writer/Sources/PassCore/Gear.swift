@@ -92,17 +92,22 @@ public enum Gear {
 
   static func value(_ d: Dice, _ a: Affix, _ r: Int, _ ilvl: Int, _ top: Bool) -> Int {
     let roll = top ? 0.5 + 0.5 * d.next() : d.next()
-    let v = (a.lo + (a.hi - a.lo) * roll) * Rarity.info(r).mult * (1 + Double(min(ilvl, 100)) / 200)
-    return max(1, Int((v + 0.5).rounded(.down)))
+    let base: Double = a.lo + (a.hi - a.lo) * roll
+    let levelMult: Double = 1 + Double(min(ilvl, 100)) / 200
+    let v: Double = base * Rarity.info(r).mult * levelMult
+    return max(1, roundHalf(v))
   }
 
   public static func make(_ d: Dice, _ r: Int, ilvl: Int, slot slotId: String? = nil) -> Drop {
     let ilvl = max(1, ilvl)
     let slot = slotId.flatMap { Gear.slot($0) } ?? d.pick(slots)
-    let bi = min(slot.bases.count, 1 + Int(Double(r - 1) * Double(slot.bases.count) / 7 + d.next() * 1.5))
+    let n = Double(slot.bases.count)
+    let pos: Double = Double(r - 1) * n / 7 + d.next() * 1.5
+    let bi = min(slot.bases.count, 1 + Int(pos))
     let base = slot.bases[bi - 1]
     let imp = affix(slot.implicit)!
-    var implicitValue = max(1, Int((Double(value(d, imp, r, ilvl, r == Rarity.mythic)) * 0.5 + 0.5).rounded(.down)))
+    let rolled: Int = value(d, imp, r, ilvl, r == Rarity.mythic)
+    var implicitValue = max(1, roundHalf(Double(rolled) * 0.5))
     if r == Rarity.poor { implicitValue = 1 }
     let pool = d.shuffled(affixes.filter { $0.id != slot.implicit })
     var stats: [Stat] = []
@@ -117,19 +122,20 @@ public enum Gear {
     // The name, the way Diablo builds one.
     var name: String
     switch r {
-    case Rarity.poor: name = d.pick(junk) + " " + base
+    case Rarity.poor: name = d.word(junk) + " " + base
     case Rarity.common: name = base
     case Rarity.uncommon:
       let a = affix(stats[0].id)!
       name = d.chance(0.5) ? a.prefix + " " + base : base + " " + a.suffix
     case Rarity.rare: name = affix(stats[0].id)!.prefix + " " + base + " " + affix(stats[1].id)!.suffix
-    case Rarity.epic: name = d.pick(epicA) + " " + d.pick(epicB)
-    case Rarity.legendary: name = d.pick(W.heroines) + "'s " + base
-    default: name = d.pick(W.heroines) + ", " + d.pick(W.epithets)
+    case Rarity.epic: name = d.word(epicA) + " " + d.word(epicB)
+    case Rarity.legendary: name = d.word(W.heroines) + "'s " + base
+    default: name = d.word(W.heroines) + ", " + d.word(W.epithets)
     }
     item.name = name
     item.text = name
-    item.sub = Rarity.name(r) + " " + slot.name + (r >= Rarity.epic ? " (\(base))" : "") + "  /  item level \(ilvl)"
+    let baseNote = r >= Rarity.epic ? " (\(base))" : ""
+    item.sub = "\(Rarity.name(r)) \(slot.name)\(baseNote)  /  item level \(ilvl)"
     return item
   }
 
@@ -154,11 +160,13 @@ public enum Gear {
       score += Double(v) / ((a.lo + a.hi) / 2) * 10
     }
     if item.power != nil { score += 25 }
-    return Int((score + 0.5).rounded(.down))
+    return roundHalf(score)
   }
 
   public static func sellValue(_ item: Drop) -> Int {
-    Int((Double(Rarity.info(item.rarity).sell) * (1 + Double(item.ilvl ?? 1) / 50) + 0.5).rounded(.down))
+    let sell = Double(Rarity.info(item.rarity).sell)
+    let level = Double(item.ilvl ?? 1)
+    return roundHalf(sell * (1 + level / 50))
   }
 }
 
@@ -172,10 +180,10 @@ public enum Looks {
 
   public static func title(_ d: Dice, _ r: Int) -> Drop {
     let t: String
-    if r <= Rarity.common { t = d.pick(W.titleRoles) }
-    else if r <= Rarity.rare { t = d.pick(W.titleAdjs) + " " + d.pick(W.titleRoles) }
-    else if r <= Rarity.legendary { t = d.pick(W.titleAdjs) + " " + d.pick(W.titleRoles) + " of " + d.pick(W.titleOf) }
-    else { t = d.pick(W.heroines) + " the " + d.pick(W.titleAdjs) + ", " + d.pick(W.titleRoles) + " of " + d.pick(W.titleOf) }
+    if r <= Rarity.common { t = d.word(W.titleRoles) }
+    else if r <= Rarity.rare { t = d.word(W.titleAdjs) + " " + d.word(W.titleRoles) }
+    else if r <= Rarity.legendary { t = d.word(W.titleAdjs) + " " + d.word(W.titleRoles) + " of " + d.word(W.titleOf) }
+    else { t = "\(d.word(W.heroines)) the \(d.word(W.titleAdjs)), \(d.word(W.titleRoles)) of \(d.word(W.titleOf))" }
     return Drop(type: "title", rarity: r, name: "Title", icon: "crown", text: t, sub: "Wear it under your name")
   }
 
@@ -186,7 +194,7 @@ public enum Looks {
                        glow: r >= Rarity.legendary, spin: r >= Rarity.mythic, sat: nil)
     if r == Rarity.poor { b.pattern = "plain"; b.sat = 0.1 }
     var drop = Drop(type: "banner", rarity: r, name: "Banner", icon: "flag",
-                    text: d.pick(W.colourWords) + " " + d.pick(W.bannerThings), sub: "A banner for your profile")
+                    text: d.word(W.colourWords) + " " + d.word(W.bannerThings), sub: "A banner for your profile")
     drop.banner = b
     return drop
   }
