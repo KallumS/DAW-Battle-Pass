@@ -5,6 +5,9 @@ name: Writing Battle Pass (Mac)
 
 on:
   push:
+    # Branches must be named too: a trigger that lists only tags ignores
+    # every branch push.
+    branches: ["**"]
     paths: ["writer/**", ".github/workflows/writer-mac.yml"]
     tags: ["writer-v*"]
   pull_request:
