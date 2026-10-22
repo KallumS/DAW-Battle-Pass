@@ -1,0 +1,35 @@
+name: Writing Battle Pass (Mac)
+
+on:
+  push:
+    paths: ["writer/**", ".github/workflows/writer-mac.yml"]
+    tags: ["writer-v*"]
+  pull_request:
+    paths: ["writer/**", ".github/workflows/writer-mac.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: writer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: swift --version && sw_vers && uname -m
+      - name: Tests
+        run: swift test 2>&1 | tail -n 200
+        shell: bash -o pipefail {0}
+      - name: Build the app
+        run: tools/make_app.sh
+      - name: Snapshots of every page
+        run: tools/snapshots.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Writing-Battle-Pass
+          path: writer/build/Writing-Battle-Pass.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapshots
+          path: writer/build/snapshots
