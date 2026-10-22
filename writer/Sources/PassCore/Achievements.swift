@@ -84,6 +84,7 @@ public enum Achievements {
   public static func fmtGoal(_ g: Double) -> String {
     let f = NumberFormatter()
     f.numberStyle = .decimal
+    f.locale = Locale(identifier: "en_GB")
     f.maximumFractionDigits = 0
     return f.string(from: NSNumber(value: g)) ?? String(Int(g))
   }

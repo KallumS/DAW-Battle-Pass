@@ -16,6 +16,10 @@ public struct BannerData: Codable, Equatable {
   public var glow: Bool
   public var spin: Bool
   public var sat: Double?
+  public init(shape: String, pattern: String, h1: Double, h2: Double, glyph: String?, glow: Bool, spin: Bool, sat: Double?) {
+    self.shape = shape; self.pattern = pattern; self.h1 = h1; self.h2 = h2
+    self.glyph = glyph; self.glow = glow; self.spin = spin; self.sat = sat
+  }
 }
 
 /// Anything handed out: coins, XP, a token, a gift box, gear, a prompt, a
@@ -120,6 +124,7 @@ public struct LogEntry: Codable, Equatable {
   public var id: String
   public var name: String
   public var t: Int
+  public init(id: String, name: String, t: Int) { self.id = id; self.name = name; self.t = t }
 }
 
 public struct Deal: Codable, Equatable {
@@ -156,6 +161,7 @@ public struct SeenApp: Codable, Equatable {
   public var name: String
   public var letters = 0.0
   public var last = 0
+  public init(name: String, letters: Double = 0, last: Int = 0) { self.name = name; self.letters = letters; self.last = last }
 }
 
 public struct Settings: Codable, Equatable {
@@ -210,6 +216,9 @@ public struct CheckinResult: Equatable {
   public var xp = 0
   public var token: String? = nil
   public var crate = 0
+  public init(day: Int = 1, streak: Int = 1, freezes: Int = 0, broke: Bool = false) {
+    self.day = day; self.streak = streak; self.freezes = freezes; self.broke = broke
+  }
 }
 
 /// What just happened, for the window to celebrate. The window is the only

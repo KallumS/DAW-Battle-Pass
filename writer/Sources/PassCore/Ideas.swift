@@ -140,7 +140,7 @@ public enum Ideas {
       if r == P { return ("Nice", "Meaning: nice.") }
       let n = r >= L ? 3 : (r >= R ? 2 : 1)
       let picks = Array(d.shuffled(W.fancyWords).prefix(n))
-      let text = picks.map { $0.0 }.joined(separator: ", ")
+      let text = picks.map { cap($0.0) }.joined(separator: ", ")
       var sub = picks.map { "\($0.0): \($0.1)" }.joined(separator: ". ")
       sub += n > 1 ? ". Use them all in one paragraph" : ". Use it in today's writing"
       return (text, sub)
