@@ -19,7 +19,8 @@ struct ContentView: View {
               .transition(.opacity.combined(with: .scale(scale: 0.97)))
           } else if model.snapshot {
             // The screenshot renderer can't draw inside a ScrollView.
-            page.padding(20).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).clipped()
+            page.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+              .frame(height: 1360, alignment: .top).clipped()
           } else {
             ScrollView {
               page.padding(20).frame(maxWidth: .infinity, alignment: .leading)
