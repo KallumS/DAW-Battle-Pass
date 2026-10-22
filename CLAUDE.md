@@ -198,6 +198,28 @@ tools/bite.sh      # every line should say "bites"
 A fresh container has no Lua: `apt-get install -y lua5.4`
 (`tools/run_lua.py` runs the suites through lupa otherwise).
 
+## Writing Battle Pass (`writer/`)
+
+A second product in this repo: the same game for a writer friend, as a
+native Apple silicon Mac app in Swift and SwiftUI
+([0018](docs/decisions/0018-the-writer-is-a-native-mac-app.md)). **Read
+[`writer/docs/BUILDING.md`](writer/docs/BUILDING.md) before touching it.**
+The user's friend is a writer in her thirties; her rewards are treats like
+make-up and clothes (her words), which she can edit in the app
+([0021](docs/decisions/0021-her-treats-are-hers-to-edit.md)).
+
+- `writer/Sources/PassCore` is the Lua rules ported to Swift: pure, time
+  passed in, notices out. `writer/Sources/WritingBattlePass` is the app.
+- **The container can't compile it.** `.github/workflows/writer-mac.yml`
+  (macOS 15, Apple silicon) runs `swift test`, builds the `.app`, draws every
+  page with `--snapshots`, and uploads the zip and the PNGs. Read the run.
+- Typing is counted, never recorded
+  ([0019](docs/decisions/0019-typing-is-counted-never-recorded.md)); a letter
+  is 0.1 XP, capped a minute
+  ([0020](docs/decisions/0020-letters-are-a-top-up.md)); closing the window
+  keeps the clock running in the menu bar
+  ([0022](docs/decisions/0022-closing-the-window-keeps-counting.md)).
+
 ## Where it stands
 
 Version 1.0, written and tested in one session (2026-10-08), **never yet run

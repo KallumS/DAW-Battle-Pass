@@ -113,14 +113,15 @@ struct Bar: View {
   var stripes = false
   var body: some View {
     GeometryReader { geo in
+      let f = CGFloat(min(1, max(0, frac)))
       ZStack(alignment: .leading) {
         Capsule().fill(Theme.deep)
         Capsule().fill(colour)
-          .frame(width: max(height, geo.size.width * min(1, max(0, frac))))
+          .frame(width: max(height, geo.size.width * f))
           .opacity(frac <= 0 ? 0.25 : 1)
         if stripes {
           Stripes().fill(Theme.accent.opacity(0.45))
-            .frame(width: max(height, geo.size.width * min(1, max(0, frac))))
+            .frame(width: max(height, geo.size.width * f))
             .clipShape(Capsule())
         }
       }

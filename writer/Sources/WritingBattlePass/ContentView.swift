@@ -92,7 +92,7 @@ struct Header: View {
 
       VStack(alignment: .leading, spacing: 6) {
         HStack(spacing: 7) {
-          CoinView(size: 18 + 6 * model.fx.coinBump)
+          CoinView(size: CGFloat(18 + 6 * model.fx.coinBump))
           Text(Fmt.num(st.coins)).font(Theme.ui(21, .heavy)).foregroundStyle(Theme.coin).monospacedDigit()
         }
         .background(GeometryReader { g in
@@ -111,7 +111,7 @@ struct Header: View {
 
   func place(_ g: GeometryProxy) {
     let f = g.frame(in: .named("root"))
-    let frac = min(1, max(0, model.st.xp / Rules.levelNeed(model.st.level)))
+    let frac = CGFloat(min(1, max(0, model.st.xp / Rules.levelNeed(model.st.level))))
     model.fx.xpPos = CGPoint(x: f.minX + max(6, f.width * frac), y: f.midY)
   }
 }

@@ -117,3 +117,20 @@ gold, all kept off the accent's yellow.
 | Quests, check-in rewards, achievements | `G.QUESTS`, `G.CHECKIN`, `G.ACHIEVEMENTS` in `bp_game.lua` |
 | What counts as activity, what a scan sees | `W.signals`, `W.scan` in `bp_watch.lua` |
 | How anything looks or moves | `DAW Battle Pass.lua` (drawing), `bp_fx.lua` (motion) |
+
+## Writing Battle Pass (`writer/`)
+
+The same game for a writer, as a native Mac app: a pure-Swift port of
+`bp_loot` and `bp_game` (`writer/Sources/PassCore`), retuned for writing -
+XP for every letter typed, words and fifteen-minute sprints, a wardrobe of
+clothes, make-up and pens instead of studio gear, writing prompts instead of
+musical ideas, and treats she edits herself. Its own guide is
+[`writer/docs/BUILDING.md`](../writer/docs/BUILDING.md).
+
+| | |
+| --- | --- |
+| [0018](decisions/0018-the-writer-is-a-native-mac-app.md) | A native Swift and SwiftUI app, compiled, tested and packaged by GitHub's Mac runners. |
+| [0019](decisions/0019-typing-is-counted-never-recorded.md) | A listen-only event tap counts letters and words in her writing apps; nothing typed is kept. |
+| [0020](decisions/0020-letters-are-a-top-up.md) | A letter is 0.1 XP, capped at 30 base XP a minute; tiers stay time. |
+| [0021](decisions/0021-her-treats-are-hers-to-edit.md) | The shop's permission slips are saved state, editable in Settings. |
+| [0022](decisions/0022-closing-the-window-keeps-counting.md) | Closing the window keeps the clock running in the menu bar. |

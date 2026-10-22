@@ -34,7 +34,7 @@ final class FXStore {
     return Double(seed % 1_000_000) / 1_000_000
   }
 
-  static let confettiColours: [Color] = [0x3FCF6E, 0x3D8EFF, 0xA45CFF, 0xFF8A1C, 0xFF3FA4, 0xFFF200, 0xF7F3F9].map { Color(hex: $0) }
+  static let confettiColours: [Color] = ([0x3FCF6E, 0x3D8EFF, 0xA45CFF, 0xFF8A1C, 0xFF3FA4, 0xFFF200, 0xF7F3F9] as [UInt32]).map { Color(hex: $0) }
 
   func confetti(at p: CGPoint, count: Int = 60, speed: Double = 380) {
     for _ in 0..<count {
@@ -59,7 +59,7 @@ final class FXStore {
   func coins(from p: CGPoint, count: Int) {
     for i in 0..<count {
       let a = rnd() * 2 * .pi
-      let start = CGPoint(x: p.x + cos(a) * 30 * rnd(), y: p.y + sin(a) * 30 * rnd())
+      let start = CGPoint(x: Double(p.x) + cos(a) * 30 * rnd(), y: Double(p.y) + sin(a) * 30 * rnd())
       particles.append(Particle(x: start.x, y: start.y, vx: 0, vy: 0, life: 0.7 + Double(i) * 0.025, age: 0,
                                 size: 11, colour: Theme.coin, gravity: 0, target: coinPos, start: start))
     }
@@ -82,10 +82,12 @@ final class FXStore {
       if let t = particles[i].target, let s = particles[i].start {
         let k = min(1, particles[i].age / particles[i].life)
         let e = k * k * (3 - 2 * k)
-        let mid = CGPoint(x: (s.x + t.x) / 2, y: min(s.y, t.y) - 120)
+        let sx = Double(s.x), sy = Double(s.y), tx = Double(t.x), ty = Double(t.y)
+        let mx = (sx + tx) / 2, my = min(sy, ty) - 120
         let u = 1 - e
-        particles[i].x = u * u * s.x + 2 * u * e * mid.x + e * e * t.x
-        particles[i].y = u * u * s.y + 2 * u * e * mid.y + e * e * t.y
+        let a = u * u, b = 2 * u * e, c = e * e
+        particles[i].x = a * sx + b * mx + c * tx
+        particles[i].y = a * sy + b * my + c * ty
         if k >= 1 { coinBump = 1 }
       } else {
         particles[i].vy += particles[i].gravity * dt

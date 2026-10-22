@@ -26,8 +26,9 @@ public final class Engine {
   public var ss: Session
 
   public init(state: GameState, tp: Double, epoch: Int) {
+    var state = state
+    state.stats.sessions += 1
     st = state
-    st.stats.sessions += 1
     let (h, w) = Dates.hourAndWeekday(epoch)
     ss = Session(start: tp, lastInput: tp - 1e6, xpWinStart: tp, hour: h, wday: w,
                  rnd: Dice(seedOf("session", epoch, tp)))

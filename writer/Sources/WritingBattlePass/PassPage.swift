@@ -145,7 +145,7 @@ struct WeekChart: View {
           Text(d.1 > 0 ? Fmt.dur(d.1) : "").font(Theme.ui(10)).foregroundStyle(Theme.dim)
           RoundedRectangle(cornerRadius: 4)
             .fill(d.0 == today ? Theme.pass : Theme.pass.opacity(0.55))
-            .frame(height: max(3, 110 * d.1 / top))
+            .frame(height: CGFloat(max(3, 110 * d.1 / top)))
           Text(Dates.shortDay(d.0)).font(Theme.ui(10.5, d.0 == today ? .bold : .regular))
             .foregroundStyle(d.0 == today ? Theme.text : Theme.dim)
           Text(d.2 > 0 ? Fmt.num(d.2) + "w" : " ").font(Theme.ui(9.5)).foregroundStyle(Theme.dim)
