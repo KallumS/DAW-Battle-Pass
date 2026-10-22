@@ -9,4 +9,5 @@ levels. Every letter is still counted for stats and achievements.
 
 Typing earns XP only. Tiers stay time (0004), and coins come from tiers,
 quests, check-ins and boxes as in DAW Battle Pass, so the economy (0013)
-carries over: about 550 coins an hour of writing.
+carries over: the Economy test measures about 630 coins an hour of writing
+(two hours a day for a fortnight), so a new top (2,500) is about four hours.

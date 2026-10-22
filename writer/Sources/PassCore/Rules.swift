@@ -34,7 +34,7 @@ public enum Rules {
 
   // The shop ------------------------------------------------------------------
   //
-  // Prices in coins. A focused hour earns very roughly 550 coins all told, so a
+  // Prices in coins. A focused hour earns roughly 600 coins all told (the Economy test), so a
   // new top is about four or five hours of writing. Passes are permission
   // slips: hers to rename, reprice, add and remove in Settings.
 

@@ -206,6 +206,6 @@ final class EconomyTests: XCTestCase {
       print("  " + item.name.padding(toLength: 24, withPad: " ", startingAt: 0)
             + String(format: "%6d coins  about %.1f hours", item.price, Double(item.price) / perHour))
     }
-    XCTAssertTrue((350...900).contains(perHour), "about 550 coins an hour (\(perHour))")
+    XCTAssertTrue((350...900).contains(perHour), "about 600 coins an hour (\(perHour))")
   }
 }

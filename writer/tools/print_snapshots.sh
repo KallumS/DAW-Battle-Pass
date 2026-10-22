@@ -7,7 +7,7 @@ cd "$(dirname "$0")/../build/snapshots"
 mkdir -p ../small
 for f in *.png; do
   n="${f%.png}"
-  sips -Z 820 -s format jpeg -s formatOptions 52 "$f" --out "../small/$n.jpg" >/dev/null
+  sips -Z 1150 -s format jpeg -s formatOptions 52 "$f" --out "../small/$n.jpg" >/dev/null
   echo "SNAP-BEGIN $n"
   base64 -i "../small/$n.jpg" | fold -w 6000
   echo "SNAP-END $n"

@@ -17,6 +17,9 @@ struct ContentView: View {
             StageView(model: model, item: item)
               .id(item.id)
               .transition(.opacity.combined(with: .scale(scale: 0.97)))
+          } else if model.snapshot {
+            // The screenshot renderer can't draw inside a ScrollView.
+            VStack { page.padding(20).frame(maxWidth: .infinity, alignment: .leading); Spacer(minLength: 0) }
           } else {
             ScrollView {
               page.padding(20).frame(maxWidth: .infinity, alignment: .leading)

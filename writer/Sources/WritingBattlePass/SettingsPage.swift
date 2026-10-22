@@ -92,7 +92,7 @@ struct SettingsPage: View {
 
       Panel {
         VStack(alignment: .leading, spacing: 10) {
-          SectionTitle(text: "Your treats", right: "About 550 coins an hour of writing")
+          SectionTitle(text: "Your treats", right: "About 600 coins an hour of writing")
           ForEach(st.rewards) { item in RewardRow(model: model, item: item) }
           HStack {
             TextField("A new treat, e.g. Spa Day Pass", text: $newName).textFieldStyle(.roundedBorder)

@@ -60,8 +60,8 @@ enum Snapshots {
     let model = Model(snapshot: true, engine: demoEngine())
     model.tapRunning = true
     model.counting = true
-    func shot(_ name: String) {
-      let view = ContentView(model: model).frame(width: 1020, height: 760)
+    func shot(_ name: String, height: CGFloat = 760) {
+      let view = ContentView(model: model).frame(width: 1020, height: height)
       let r = ImageRenderer(content: view)
       r.scale = 1
       guard let img = r.nsImage, let tiff = img.tiffRepresentation,
@@ -74,7 +74,7 @@ enum Snapshots {
     }
     for t in Tab.allCases {
       model.tab = t
-      shot("page-\(t.rawValue)")
+      shot("page-\(t.rawValue)", height: 1500)
     }
     model.toast("Quest complete!", "Write 500 words", "scroll", 4)
     model.toast("Big Day I", "Write 500 words in one day", "trophy.fill", 5, coins: 40, xp: 80, trophy: true)

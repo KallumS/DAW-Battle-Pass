@@ -17,6 +17,11 @@ on:
 permissions:
   contents: write
 
+# A newer push replaces a build still running for the same branch.
+concurrency:
+  group: writer-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: macos-15
