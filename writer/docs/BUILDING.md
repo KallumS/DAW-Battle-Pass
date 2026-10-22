@@ -12,7 +12,7 @@ compiler**: push, then read the run.
 | `Tests/PassCoreTests/` | XCTest: dates, the clock, typing XP and its cap, words and sprints, quests, check-ins, the shop and her own treats, the wardrobe, gift boxes, seasons, achievements, saving; every prompt at every rarity; a **Demo** that prints a sample of everything and an **Economy** run that prints coins per hour and what each treat costs in hours. |
 | `tools/make_app.sh` | `swift build -c release --arch arm64`, then the `.app` bundle, the icon (`sips` + `iconutil`), an ad-hoc signature and a zip. |
 | `tools/snapshots.sh` | Runs the built app with `--snapshots`: every page and celebration of a made-up save drawn to `build/snapshots/*.png`. |
-| `Resources/` | `Info.plist` and the 1024px icon (drawn with PIL; regenerate with the script in the 2026-10-22 session log). |
+| `Resources/` | `Info.plist` and the 1024px icon, drawn by `tools/draw_icon.py` (Pillow). |
 
 | `tools/print_snapshots.sh` | Prints each snapshot into the CI log as a small base64 JPEG between `SNAP-BEGIN`/`SNAP-END` lines - Claude's containers can read job logs but not download artifacts. |
 
