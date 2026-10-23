@@ -16,7 +16,7 @@ public enum Rarity {
   public static let poor = 1, common = 2, uncommon = 3, rare = 4, epic = 5, legendary = 6, mythic = 7
 
   public static let all: [RarityInfo] = [
-    RarityInfo(name: "Poor",      colour: 0x948B9C, weight: 12,  coins: 4...9,     xp: 15,   sell: 1,   mult: 0.6),
+    RarityInfo(name: "Poor",      colour: 0xB3AABB, weight: 12,  coins: 4...9,     xp: 15,   sell: 1,   mult: 0.6),
     RarityInfo(name: "Common",    colour: 0xE6E1EA, weight: 40,  coins: 10...20,   xp: 30,   sell: 3,   mult: 0.8),
     RarityInfo(name: "Uncommon",  colour: 0x3FCF6E, weight: 26,  coins: 20...40,   xp: 60,   sell: 8,   mult: 1.0),
     RarityInfo(name: "Rare",      colour: 0x3D8EFF, weight: 14,  coins: 40...80,   xp: 120,  sell: 20,  mult: 1.15),

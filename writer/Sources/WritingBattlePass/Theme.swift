@@ -15,7 +15,7 @@ enum Theme {
   static let rule = Color(hex: 0x3B3443)        // separators, locked things
   static let grab = Color(hex: 0x5A5163)        // the clock's ring when paused
   static let text = Color(hex: 0xEDE7F0)
-  static let dim = Color(hex: 0x948B9C)
+  static let dim = Color(hex: 0xB3AABB)        // 7:1 on the ground (Apple's guidelines, as Miderator)
   static let bright = Color(hex: 0xF7F3F9)
   static let warn = Color(hex: 0xE0485A)        // the dot on a tab with something waiting
   static let xp = Color(hex: 0x3D8EFF)          // the level bar: Rare's blue

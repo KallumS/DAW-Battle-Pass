@@ -30,7 +30,7 @@ enum Snapshots {
     e.st.profile.title = 2
     e.st.profile.banner = 3
     e.st.inv.crates = [0, 2, 1, 1, 1, 0, 1]
-    e.st.inv.passes = ["lipstick": 1, "coffee": 2]
+    e.st.inv.passes = ["gig": 1, "coffee": 2]
     e.st.inv.tokens = ["reroll": 2, "freeze": 1, "boost": 1]
     e.st.checkin.streak = 4; e.st.checkin.best = 9; e.st.checkin.total = 21
     e.st.checkin.last = Dates.dayKey(epoch - 86400)
@@ -101,7 +101,7 @@ enum Snapshots {
     got.day = 5; got.streak = 5; got.token = "reroll"
     model.stage = [StageItem(kind: .checkin, checkin: got)]
     shot("stage-checkin-done")
-    model.stage = [StageItem(kind: .redeem, name: "New Lipstick Pass", icon: "mouth.fill")]
+    model.stage = [StageItem(kind: .redeem, name: "Gig Ticket Pass", icon: "ticket.fill")]
     shot("stage-redeem")
     model.stage = [StageItem(kind: .season, title: Loot.seasonName(e.st.pass.season + 1))]
     shot("stage-season")

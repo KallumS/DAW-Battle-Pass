@@ -120,6 +120,7 @@ final class Model: ObservableObject {
       tapRunning = KeyTap.start()
     }
     let keys = KeyTap.take()
+    fx.calm = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     front = Watch.front()
     let s = engine.st.settings
     counting = front.map { $0.id != Watch.me && (s.everywhere || s.apps.contains($0.id)) } ?? false

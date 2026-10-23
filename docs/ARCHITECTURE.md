@@ -134,3 +134,5 @@ musical ideas, and treats she edits herself. Its own guide is
 | [0020](decisions/0020-letters-are-a-top-up.md) | A letter is 0.1 XP, capped at 30 base XP a minute; tiers stay time. |
 | [0021](decisions/0021-her-treats-are-hers-to-edit.md) | The shop's permission slips are saved state, editable in Settings. |
 | [0022](decisions/0022-closing-the-window-keeps-counting.md) | Closing the window keeps the clock running in the menu bar. |
+| [0023](decisions/0023-clothes-and-kit-not-frills.md) | She's a bit of a tomboy: gig tickets and jackets, not lipstick and dresses; tested. |
+| [0024](decisions/0024-borrowed-from-miderator.md) | From Miderator: a .dmg with "Read me first", text at 7:1, Reduce Motion respected. |

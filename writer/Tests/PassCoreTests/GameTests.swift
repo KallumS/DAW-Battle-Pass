@@ -257,16 +257,16 @@ final class CheckinTests: XCTestCase {
 final class ShopTests: XCTestCase {
   func testBuyRedeem() {
     let r = Rig()
-    XCTAssertFalse(r.g.buy("lipstick"), "not without the coins")
-    r.g.st.coins = 2000
-    XCTAssertTrue(r.g.buy("lipstick"))
-    XCTAssertEqual(r.g.st.coins, 500)
-    XCTAssertEqual(r.g.st.inv.passes["lipstick"], 1)
-    XCTAssertTrue(r.g.redeem("lipstick", r.epoch))
-    XCTAssertNil(r.g.st.inv.passes["lipstick"])
-    XCTAssertEqual(r.g.st.log.first?.name, "New Lipstick Pass")
+    XCTAssertFalse(r.g.buy("gig"), "not without the coins")
+    r.g.st.coins = 2500
+    XCTAssertTrue(r.g.buy("gig"))
+    XCTAssertEqual(r.g.st.coins, 300)
+    XCTAssertEqual(r.g.st.inv.passes["gig"], 1)
+    XCTAssertTrue(r.g.redeem("gig", r.epoch))
+    XCTAssertNil(r.g.st.inv.passes["gig"])
+    XCTAssertEqual(r.g.st.log.first?.name, "Gig Ticket Pass")
     XCTAssertEqual(r.count(.redeem), 1)
-    XCTAssertFalse(r.g.redeem("lipstick", r.epoch))
+    XCTAssertFalse(r.g.redeem("gig", r.epoch))
   }
 
   func testTokensBoxesAndDeals() {
@@ -305,16 +305,16 @@ final class ShopTests: XCTestCase {
 final class GearTests: XCTestCase {
   func testEquipSalvage() {
     let r = Rig()
-    let a = r.g.grant(Gear.make(Dice(5), Rarity.rare, ilvl: 3, slot: "lips"))
-    let b = r.g.grant(Gear.make(Dice(6), Rarity.epic, ilvl: 3, slot: "lips"))
+    let a = r.g.grant(Gear.make(Dice(5), Rarity.rare, ilvl: 3, slot: "phones"))
+    let b = r.g.grant(Gear.make(Dice(6), Rarity.epic, ilvl: 3, slot: "phones"))
     XCTAssertEqual(r.g.st.gear.stash.count, 2)
     let ua = r.g.st.gear.stash[1].uid!, ub = r.g.st.gear.stash[0].uid!
     XCTAssertTrue(r.g.equip(ua))
-    XCTAssertEqual(r.g.st.gear.equipped["lips"]?.name, a.name)
+    XCTAssertEqual(r.g.st.gear.equipped["phones"]?.name, a.name)
     XCTAssertTrue(r.g.equip(ub))
-    XCTAssertEqual(r.g.st.gear.equipped["lips"]?.name, b.name, "the new one goes on")
+    XCTAssertEqual(r.g.st.gear.equipped["phones"]?.name, b.name, "the new one goes on")
     XCTAssertEqual(r.g.st.gear.stash.count, 1, "the old one back in the wardrobe")
-    XCTAssertGreaterThan(r.g.bonus("coins"), 0, "lipstick's implicit is coins")
+    XCTAssertGreaterThan(r.g.bonus("coins"), 0, "headphones' implicit is coins")
     let coins = r.g.st.coins
     XCTAssertGreaterThan(r.g.salvage(ua), 0)
     XCTAssertGreaterThan(r.g.st.coins, coins)

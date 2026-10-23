@@ -51,7 +51,7 @@ jobs:
         if: always()
         with:
           name: Writing-Battle-Pass
-          path: writer/build/Writing-Battle-Pass.zip
+          path: writer/build/Writing-Battle-Pass.dmg
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -65,9 +65,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/writer-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: writer/build/Writing-Battle-Pass.zip
+          files: writer/build/Writing-Battle-Pass.dmg
           name: Writing Battle Pass ${{ github.ref_name }}
           body: |
-            Download Writing-Battle-Pass.zip below, unzip it and drag the app into Applications.
-            The first time, open System Settings → Privacy & Security and click Open Anyway.
-            See writer/README.md for the rest.
+            Download Writing-Battle-Pass.dmg below, open it and drag the app into Applications.
+            "Read me first" inside says what to do the first time.

@@ -44,7 +44,7 @@ enum W {
     "at a masked ball", "in a botanical garden's glasshouse", "on a film set"]
 
   static let narrators = ["the villain", "a cat", "the house itself", "a wedding dress",
-    "the best friend", "an unreliable mother", "a ghost", "a lipstick", "a teenager",
+    "the best friend", "an unreliable mother", "a ghost", "a leather jacket", "a teenager",
     "the town gossip", "a diary", "a stranger on the train", "the dog", "her future self"]
 
   static let twists = ["the narrator has been lying all along",
@@ -134,9 +134,9 @@ enum W {
     "controlling", "vain", "stubborn", "impulsive", "secretive", "a terrible judge of men"]
 
   static let quirks = ["speaks in questions when nervous", "quotes old films",
-    "always wears red lipstick", "collects other people's keys", "hums when lying",
+    "wears the same battered boots everywhere", "collects other people's keys", "hums when lying",
     "never finishes a cup of tea", "counts everything", "names every houseplant",
-    "only reads the last page first", "keeps a lipstick in every coat pocket"]
+    "only reads the last page first", "keeps a penknife in every coat pocket"]
 
   static let needs = ["to accept some help", "to forgive and be forgiven", "to tell the truth",
     "to stop running", "to be loved exactly as they are", "to let the past go", "to stop apologising"]
@@ -210,8 +210,8 @@ enum W {
     "Write from the point of view of an object", "No word may be longer than two syllables"]
 
   static let poemTopics = ["the first coffee of the day", "a lost earring", "the sea in winter",
-    "an old flame", "Sunday mornings", "your favourite lipstick", "a city at night",
-    "your grandmother's hands", "the moment before sleep", "a dress you'll never wear",
+    "an old flame", "Sunday mornings", "your favourite jacket", "a city at night",
+    "your grandmother's hands", "the moment before sleep", "a gig you'll never forget",
     "the last day of summer", "a borrowed jumper", "a friend you've lost touch with"]
 
   /// Forms, simplest first: a rarer poem draws from further down the list.
@@ -287,34 +287,34 @@ enum W {
 
   // Cosmetics -----------------------------------------------------------------
 
-  static let titleAdjs = ["Fabulous", "Caffeinated", "Unblocked", "Prolific", "Glamorous", "Midnight",
+  static let titleAdjs = ["Fearless", "Caffeinated", "Unblocked", "Prolific", "Rogue", "Midnight",
     "Velvet", "Fearless", "Iconic", "Certified", "Unstoppable", "Elegant", "Chaotic", "Cosy",
-    "Legendary", "Award-Winning", "Bestselling", "Brilliant", "Sparkling", "Wicked", "Notorious",
+    "Legendary", "Award-Winning", "Bestselling", "Brilliant", "Scrappy", "Wicked", "Notorious",
     "Effortless"]
-  static let titleRoles = ["Wordsmith", "Plot Witch", "Comma Queen", "Metaphor Maven",
-    "Chapter Chaser", "Draft Duchess", "Prose Princess", "Dialogue Darling", "Story Sorceress",
-    "Muse Wrangler", "Semicolon Sage", "Ink Goddess", "Page Turner", "Plot Twister",
-    "Sentence Stylist", "Character Whisperer", "Simile Siren", "Verse Vixen", "Narrative Ninja",
-    "Paragraph Diva", "Cliffhanger Countess"]
+  static let titleRoles = ["Wordsmith", "Plot Witch", "Comma Commander", "Metaphor Maven",
+    "Chapter Chaser", "Draft Dragon", "Prose Pirate", "Dialogue Daredevil", "Story Wrangler",
+    "Muse Wrangler", "Semicolon Sage", "Ink Slinger", "Page Turner", "Plot Twister",
+    "Sentence Smith", "Character Whisperer", "Simile Sniper", "Verse Viking", "Narrative Ninja",
+    "Paragraph Punk", "Cliffhanger Captain"]
   static let titleOf = ["the Last Chapter", "the Blank Page", "the Plot Hole", "the Second Draft",
     "Purple Prose", "Many Notebooks", "the Final Edit", "the Midnight Oil", "the Happy Ending",
     "the Cliffhanger", "the Oxford Comma", "the Red Pen"]
 
-  static let colourWords = ["Rose", "Midnight", "Champagne", "Velvet", "Blush", "Lilac", "Emerald",
+  static let colourWords = ["Rust", "Midnight", "Forest", "Velvet", "Steel", "Storm", "Emerald",
     "Ruby", "Pearl", "Coral", "Sapphire", "Amber", "Plum", "Sunset", "Ivory", "Golden"]
-  static let bannerThings = ["Swan", "Fox", "Moth", "Peony", "Raven", "Rose", "Crescent", "Butterfly",
-    "Cat", "Owl", "Hare", "Lily", "Comet", "Quill", "Siren", "Phoenix"]
+  static let bannerThings = ["Wolf", "Fox", "Moth", "Bear", "Raven", "Stag", "Crescent", "Hawk",
+    "Cat", "Owl", "Hare", "Kraken", "Comet", "Quill", "Dragon", "Phoenix"]
 
   // Legendary and Mythic gear carry a name.
   static let heroines = ["Seraphine", "Odette", "Marguerite", "Ines", "Delphine", "Colette",
     "Rosalind", "Beatrix", "Ottilie", "Clementine", "Vivienne", "Isadora", "Juniper", "Margot",
     "Lucinda", "Celestine", "Anouk", "Perpetua", "Wilhelmina", "Esmeralda"]
   static let epithets = ["Keeper of the Last Chapter", "the Unblocked", "Muse of Midnight",
-    "Queen of the Comma", "Breaker of Blank Pages", "the Plot Witch", "Duchess of the Denouement",
+    "Wrangler of Commas", "Breaker of Blank Pages", "the Plot Witch", "Destroyer of Deadlines",
     "Bringer of Plot Twists", "the Bestseller", "Heart of the Story", "the Final Draft"]
 
-  static let seasonAdj = ["Velvet", "Midnight", "Golden", "Rose", "Silk", "Moonlit", "Crimson",
-    "Ivory", "Honey", "Starlit", "Emerald", "Pearl", "Wild", "Secret", "Paper", "Gilded"]
+  static let seasonAdj = ["Velvet", "Midnight", "Golden", "Storm", "Iron", "Moonlit", "Crimson",
+    "Ivory", "Electric", "Starlit", "Emerald", "Rogue", "Wild", "Secret", "Paper", "Gilded"]
   static let seasonNoun = ["Chapters", "Pages", "Letters", "Verses", "Drafts", "Stories", "Secrets",
     "Sonnets", "Diaries", "Inkwells", "Plots", "Promises", "Fables", "Endings", "Margins"]
 }

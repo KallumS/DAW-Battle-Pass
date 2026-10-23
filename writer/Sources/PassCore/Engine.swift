@@ -16,9 +16,9 @@ import Foundation
 ///     the LEVEL bar; every level gives a gift box.
 ///   - Daily CHECK-IN on a seven-day calendar, a streak, Streak Freezes.
 ///   - Three DAILY and four WEEKLY QUESTS: words, sprints, sittings.
-///   - COINS buy passes (permission slips: a lipstick, a new top...),
+///   - COINS buy passes (permission slips: a gig ticket, new trainers...),
 ///     tokens and gift boxes in the SHOP, and three Daily Deals.
-///   - A WARDROBE in the manner of Diablo: eight slots, affixes that boost XP,
+///   - A WARDROBE in the manner of Diablo: eight slots of clothes and kit, affixes that boost XP,
 ///     coins, loot and more, Legendary powers. Sell what you don't want.
 ///   - ACHIEVEMENTS in series, each with tiers.
 public final class Engine {

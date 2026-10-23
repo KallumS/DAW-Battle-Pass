@@ -8,6 +8,7 @@ struct StageView: View {
   @ObservedObject var model: Model
   let item: StageItem
   @State private var shown = false
+  @Environment(\.accessibilityReduceMotion) private var calm
 
   var body: some View {
     VStack(spacing: 18) {
@@ -23,7 +24,9 @@ struct StageView: View {
     .background(
       RadialGradient(colors: [glow.opacity(0.22), Theme.ground.opacity(0)], center: .center, startRadius: 10, endRadius: 520)
     )
-    .onAppear { withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { shown = true } }
+    .onAppear {
+      if calm { shown = true } else { withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) { shown = true } }
+    }
   }
 
   var glow: Color {
@@ -69,8 +72,8 @@ struct StageView: View {
       Button { model.openStageCrate() } label: {
         Image(systemName: "gift.fill").font(.system(size: 120)).foregroundStyle(Theme.rarity(item.crate))
           .shadow(color: Theme.rarity(item.crate).opacity(0.8), radius: 30)
-          .rotationEffect(.degrees(shown ? -4 : 4))
-          .animation(.easeInOut(duration: 0.35).repeatForever(autoreverses: true), value: shown)
+          .rotationEffect(.degrees(calm ? 0 : (shown ? -4 : 4)))
+          .animation(calm ? nil : .easeInOut(duration: 0.35).repeatForever(autoreverses: true), value: shown)
       }
       .buttonStyle(.plain)
       .padding(20)
@@ -84,7 +87,7 @@ struct StageView: View {
           DropCard(drop: d)
             .scaleEffect(shown ? 1 : 0.4)
             .opacity(shown ? 1 : 0)
-            .animation(.spring(response: 0.55, dampingFraction: 0.65).delay(0.12 * Double(i)), value: shown)
+            .animation(calm ? nil : .spring(response: 0.55, dampingFraction: 0.65).delay(0.12 * Double(i)), value: shown)
         }
       }
       .frame(maxWidth: CGFloat(cols) * 250)
@@ -197,8 +200,8 @@ struct WelcomeView: View {
       VStack(alignment: .leading, spacing: 8) {
         point("clock", "Every fifteen minutes of writing unlocks a tier of this month's pass. Every hour, a big one.")
         point("character.cursor.ibeam", "Every letter you type earns a little XP. Levels bring gift boxes.")
-        point("gift", "Gifts are coins, writing prompts, titles, banners - and a wardrobe of clothes, make-up and pens that make you earn faster.")
-        point("bag", "Coins buy treats in the Shop: a lipstick, a new top, a makeup haul. You choose the treats and prices in Settings.")
+        point("gift", "Gifts are coins, writing prompts, titles, banners - and a wardrobe of clothes, kit and pens that make you earn faster.")
+        point("bag", "Coins buy treats in the Shop: a gig ticket, new trainers, a makeup restock. You choose the treats and prices in Settings.")
         point("pause.circle", "The clock only runs while you're writing, and pauses when you stop.")
       }
       .frame(maxWidth: 560)

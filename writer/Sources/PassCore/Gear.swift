@@ -32,18 +32,18 @@ public enum Gear {
   public static let slots: [Slot] = [
     Slot(id: "pen", name: "Pen", icon: "pencil", implicit: "typing",
          bases: ["Chewed Biro", "Gel Pen", "Rollerball", "Fountain Pen", "Gold-Nib Fountain Pen", "Antique Quill"]),
-    Slot(id: "lips", name: "Lipstick", icon: "mouth", implicit: "coins",
-         bases: ["Lip Balm", "Tinted Gloss", "Satin Lipstick", "Matte Lipstick", "Velvet Lip Colour", "Couture Lipstick"]),
-    Slot(id: "scent", name: "Perfume", icon: "drop", implicit: "luck",
-         bases: ["Body Mist", "Eau de Toilette", "Eau de Parfum", "Niche Perfume", "Extrait de Parfum", "Bespoke Fragrance"]),
-    Slot(id: "jewel", name: "Jewellery", icon: "sparkles", implicit: "quest",
-         bases: ["Hair Clip", "Stud Earrings", "Gold Hoops", "Charm Bracelet", "Pearl Necklace", "Diamond Pendant"]),
+    Slot(id: "phones", name: "Headphones", icon: "headphones", implicit: "coins",
+         bases: ["Tangled Earbuds", "Wired Earphones", "Wireless Earbuds", "Over-Ears", "Noise-Cancelling Headphones", "Studio Headphones"]),
+    Slot(id: "hat", name: "Hat", icon: "graduationcap", implicit: "luck",
+         bases: ["Bobble Hat", "Beanie", "Baseball Cap", "Bucket Hat", "Flat Cap", "Vintage Fedora"]),
+    Slot(id: "jewel", name: "Accessory", icon: "watch.analog", implicit: "quest",
+         bases: ["Hair Tie", "Friendship Bracelet", "Silver Ring", "Leather Watch", "Signet Ring", "Vintage Watch"]),
     Slot(id: "outfit", name: "Outfit", icon: "tshirt", implicit: "xp",
-         bases: ["Comfy Hoodie", "Cosy Cardigan", "Silk Blouse", "Tailored Blazer", "Wrap Dress", "Cashmere Coat"]),
+         bases: ["Old Band T-Shirt", "Comfy Hoodie", "Flannel Shirt", "Denim Jacket", "Leather Jacket", "Shearling Coat"]),
     Slot(id: "shoes", name: "Shoes", icon: "figure.walk", implicit: "endure",
-         bases: ["Fluffy Slippers", "Trainers", "Ballet Flats", "Loafers", "Ankle Boots", "Designer Heels"]),
-    Slot(id: "bag", name: "Handbag", icon: "handbag", implicit: "crate",
-         bases: ["Tote Bag", "Crossbody Bag", "Satchel", "Bucket Bag", "Evening Clutch", "Designer Handbag"]),
+         bases: ["Slippers", "Canvas Sneakers", "Trainers", "Chelsea Boots", "Combat Boots", "Limited-Edition Trainers"]),
+    Slot(id: "bag", name: "Bag", icon: "backpack", implicit: "crate",
+         bases: ["Tote Bag", "Drawstring Bag", "Backpack", "Messenger Bag", "Leather Satchel", "Waxed Canvas Rucksack"]),
     Slot(id: "charm", name: "Desk Charm", icon: "cup.and.saucer", implicit: "checkin",
          bases: ["Mug of Tea", "Scented Candle", "Succulent", "Cat Figurine", "Snow Globe", "Lucky Crystal"]),
   ]
@@ -85,10 +85,10 @@ public enum Gear {
 
   static let junk = ["Smudged", "Chipped", "Faded", "Bobbly", "Scuffed", "Snagged", "Leaky", "Hand-me-down"]
   static let affixCount = [0, 0, 1, 2, 3, 3, 4]
-  static let epicA = ["Velvet", "Silk", "Moon", "Rose", "Star", "Honey", "Midnight", "Pearl", "Ember",
-                      "Satin", "Gilt", "Wild", "Storm", "Dream", "Lace"]
-  static let epicB = ["Whisper", "Muse", "Sonnet", "Ballad", "Promise", "Secret", "Rebel", "Spell",
-                      "Kiss", "Riddle", "Charm", "Verse", "Reverie", "Sigh"]
+  static let epicA = ["Storm", "Iron", "Moon", "Rust", "Star", "Thunder", "Midnight", "Ghost", "Ember",
+                      "Neon", "Copper", "Wild", "Shadow", "Rebel", "Stone"]
+  static let epicB = ["Whisper", "Muse", "Anthem", "Ballad", "Riot", "Secret", "Howl", "Spell",
+                      "Echo", "Riddle", "Engine", "Verse", "Signal", "Outlaw"]
 
   static func value(_ d: Dice, _ a: Affix, _ r: Int, _ ilvl: Int, _ top: Bool) -> Int {
     let roll = top ? 0.5 + 0.5 * d.next() : d.next()

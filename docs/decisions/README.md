@@ -29,5 +29,7 @@ one that replaced it.
 | [0020](0020-letters-are-a-top-up.md) | A letter is a tenth of an XP, capped a minute |
 | [0021](0021-her-treats-are-hers-to-edit.md) | The treats are editable in the app |
 | [0022](0022-closing-the-window-keeps-counting.md) | Closing the window keeps the clock running |
+| [0023](0023-clothes-and-kit-not-frills.md) | Clothes and kit, not frills |
+| [0024](0024-borrowed-from-miderator.md) | Packaging and Apple's guidelines, borrowed from Miderator |
 
 [`../ARCHITECTURE.md`](../ARCHITECTURE.md) groups them by subject, on one page.

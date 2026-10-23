@@ -206,7 +206,7 @@ struct WardrobePage: View {
             SureButton(label: "Sell all Poor and Common") { model.act { $0.salvageUpTo(Rarity.common) } }
           }
           if st.gear.stash.isEmpty {
-            Text("Clothes, make-up and pens you find land here. Wear the best; sell the rest for coins.")
+            Text("Clothes, kit and pens you find land here. Wear the best; sell the rest for coins.")
               .font(Theme.ui(12.5)).foregroundStyle(Theme.dim)
           }
           LazyVGrid(columns: cols, spacing: 10) {

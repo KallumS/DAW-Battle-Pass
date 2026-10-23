@@ -1,0 +1,29 @@
+Installing Writing Battle Pass
+==============================
+
+1. Drag Writing Battle Pass into the Applications folder (the shortcut
+   beside it).
+
+2. Open it from Applications. The first time, the Mac says it can't check
+   the app for malicious software, because it isn't from the App Store or a
+   paid Apple developer. Click Done, then open System Settings > Privacy &
+   Security, scroll down, and click "Open Anyway" next to Writing Battle
+   Pass. You only do this once.
+
+   If the Mac says the app "is damaged and can't be opened", open Terminal
+   (Applications > Utilities > Terminal), paste this line and press Return:
+
+       xattr -cr "/Applications/Writing Battle Pass.app"
+
+   then open it again. That removes the "downloaded from the internet" mark,
+   which is all the warning is about.
+
+3. To earn XP for every letter you type, click "Allow typing to count" on
+   the welcome screen and turn on Writing Battle Pass in System Settings >
+   Privacy & Security > Input Monitoring. It only counts key presses - it
+   never reads, keeps or sends what you write. Quit and reopen it if it
+   doesn't notice straight away. After an update you may need to switch it
+   off and on again there.
+
+Closing the window doesn't stop the clock: the pencil in the menu bar at
+the top of the screen keeps counting. Quit from there to stop it.

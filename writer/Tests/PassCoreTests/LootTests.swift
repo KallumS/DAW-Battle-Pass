@@ -147,6 +147,19 @@ final class LootTests: XCTestCase {
     }
   }
 
+  /// She's a writer who likes clothes and some make-up, but not frills
+  /// (0023): no lipstick, dresses, nails, heels or handbags in what's handed
+  /// out or sold. Story prompts may still mention them.
+  func testRewardsAreNotFrilly() {
+    let frills = ["lipstick", "dress", "nail", "heel", "handbag", "perfume", "jewel", "princess", "duchess",
+                  "queen", "countess", "diva", "goddess", "vixen", "glamorous", "sparkl", "pamper"]
+    var words = Rules.defaultRewards.flatMap { [$0.name, $0.desc] }
+    words += Gear.slots.flatMap { [$0.name] + $0.bases }
+    words += W.titleRoles + W.titleAdjs + W.epithets + W.bannerThings + W.colourWords + W.seasonAdj
+    words += Achievements.all.map(\.title) + Gear.epicA + Gear.epicB
+    for w in words { for f in frills { XCTAssertFalse(w.lowercased().contains(f), "\(w) is frilly") } }
+  }
+
   func testShopIsSane() {
     let ids = (Rules.defaultRewards + Rules.fixedShop).map(\.id)
     XCTAssertEqual(Set(ids).count, ids.count, "every shop id is different")

@@ -204,9 +204,13 @@ A second product in this repo: the same game for a writer friend, as a
 native Apple silicon Mac app in Swift and SwiftUI
 ([0018](docs/decisions/0018-the-writer-is-a-native-mac-app.md)). **Read
 [`writer/docs/BUILDING.md`](writer/docs/BUILDING.md) before touching it.**
-The user's friend is a writer in her thirties; her rewards are treats like
-make-up and clothes (her words), which she can edit in the app
-([0021](docs/decisions/0021-her-treats-are-hers-to-edit.md)).
+The user's friend is a writer in her thirties who likes clothes and a bit
+of make-up but is "a bit of a tomboy": rewards are clothes and kit, not
+frills ([0023](docs/decisions/0023-clothes-and-kit-not-frills.md)), and she
+can edit the treats in the app
+([0021](docs/decisions/0021-her-treats-are-hers-to-edit.md)). It ships as a
+.dmg and follows Miderator's lead on Apple's guidelines
+([0024](docs/decisions/0024-borrowed-from-miderator.md)).
 
 - `writer/Sources/PassCore` is the Lua rules ported to Swift: pure, time
   passed in, notices out. `writer/Sources/WritingBattlePass` is the app.

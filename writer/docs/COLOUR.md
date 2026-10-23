@@ -15,7 +15,7 @@ by hand: change a colour in `Theme.swift` or `Rarity.swift`, change it here.
 | Rule | `#3B3443` | separators, empty slots |
 | Grab | `#5A5163` | the clock's ring while paused |
 | Body text | `#EDE7F0` | (also Common) |
-| Dim text | `#948B9C` | (also Poor) |
+| Dim text | `#B3AABB` | (also Poor) - 7:1 on the ground, as Apple's guidelines ask (0024) |
 | Bright | `#F7F3F9` | the level number |
 | Warn | `#E0485A` | the dot on a tab with something waiting |
 

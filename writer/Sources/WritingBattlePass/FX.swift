@@ -25,6 +25,8 @@ final class FXStore {
   var coinPos = CGPoint(x: 800, y: 40)
   var xpPos = CGPoint(x: 300, y: 50)
   var coinBump = 0.0
+  /// The Mac's Reduce Motion setting: nothing flies, bursts or floats.
+  var calm = false
   private var seed: UInt64 = 88172645463325252
 
   var isEmpty: Bool { particles.isEmpty && floaters.isEmpty && rings.isEmpty }
@@ -37,6 +39,7 @@ final class FXStore {
   static let confettiColours: [Color] = ([0x3FCF6E, 0x3D8EFF, 0xA45CFF, 0xFF8A1C, 0xFF3FA4, 0xFFF200, 0xF7F3F9] as [UInt32]).map { Color(hex: $0) }
 
   func confetti(at p: CGPoint, count: Int = 60, speed: Double = 380) {
+    if calm { return }
     for _ in 0..<count {
       let a: Double = -Double.pi / 2 + (rnd() - 0.5) * 2.2
       let v: Double = speed * (0.4 + rnd() * 0.8)
@@ -50,6 +53,7 @@ final class FXStore {
   }
 
   func burst(at p: CGPoint, count: Int = 24, colours: [Color], speed: Double = 280, size: Double = 4) {
+    if calm { return }
     for _ in 0..<count {
       let a: Double = rnd() * 2 * .pi
       let v: Double = speed * (0.3 + rnd() * 0.7)
@@ -62,6 +66,7 @@ final class FXStore {
   }
 
   func coins(from p: CGPoint, count: Int) {
+    if calm { coinBump = 1; return }
     for i in 0..<count {
       let a: Double = rnd() * 2 * .pi
       let sx: Double = Double(p.x) + cos(a) * 30 * rnd()
@@ -73,10 +78,12 @@ final class FXStore {
   }
 
   func floater(_ text: String, at p: CGPoint, colour: Color) {
+    if calm { return }
     floaters.append(Floater(text: text, x: p.x, y: p.y, colour: colour))
   }
 
   func ring(at p: CGPoint, colour: Color, radius: Double = 80, life: Double = 0.7) {
+    if calm { return }
     rings.append(RingFX(x: p.x, y: p.y, colour: colour, radius: radius, life: life))
   }
 

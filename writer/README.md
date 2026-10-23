@@ -9,9 +9,10 @@ Every **letter you type** earns a little XP (a tenth of a point each, so a
 thousand words is roughly a level early on), and every level brings a **gift
 box**. Gifts are coins, writing prompts (characters, first lines, plot
 twists, book titles...), titles, banners - and a **wardrobe** of clothes,
-make-up and pens, each with stats that make you earn faster. Coins buy
-**treats** in the shop: permission slips for a fancy coffee, a new lipstick,
-a new top, a makeup haul, a shopping spree. Buy one, then redeem it when you
+hats, headphones, trainers and pens, each with stats that make you earn
+faster. Coins buy **treats** in the shop: permission slips for a fancy
+coffee, a game night, gig tickets, a new top, new trainers, a makeup
+restock, a new jacket, a shopping spree. Buy one, then redeem it when you
 take the treat. You can rename, reprice, add and remove treats in Settings.
 
 When you stop writing, the clock pauses. Close the window and it carries on
@@ -20,13 +21,15 @@ stop it.
 
 ## Installing
 
-1. Download **Writing-Battle-Pass.zip** and double-click it. Drag
-   **Writing Battle Pass** into your **Applications** folder.
+1. Download **Writing-Battle-Pass.dmg** and double-click it. Drag
+   **Writing Battle Pass** onto the **Applications** shortcut beside it.
 2. Open it. The first time, the Mac will say it can't check the app for
    malicious software, because it isn't from the App Store or a paid Apple
    developer account. Click **Done** (not Move to Bin), then open **System
    Settings → Privacy & Security**, scroll down, and click **Open Anyway**
-   next to Writing Battle Pass. You only do this once.
+   next to Writing Battle Pass. You only do this once. (If it says the app
+   "is damaged", paste `xattr -cr "/Applications/Writing Battle Pass.app"`
+   into Terminal and press Return - see "Read me first" in the .dmg.)
 3. To count letters, the Mac has to let the app see key presses. Click
    **Allow typing to count** on the welcome screen, then turn on Writing
    Battle Pass in **System Settings → Privacy & Security → Input
