@@ -187,7 +187,9 @@ public final class Engine {
     case "xp": addXp(Double(d.amount ?? 0), "drop")
     case "token": st.inv.tokens[d.token ?? "reroll", default: 0] += d.amount ?? 1
     case "crate": st.inv.crates[d.rarity - 1] += 1
-    case "gear": stashGear(d)
+    case "gear":
+      if d.flavour != nil { st.stats.relics += 1 }
+      stashGear(d)
     case "idea":
       d.uid = newId()
       d.t = ss.epoch

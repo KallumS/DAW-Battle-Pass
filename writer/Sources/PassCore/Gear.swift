@@ -132,6 +132,15 @@ public enum Gear {
     case Rarity.legendary: name = d.word(W.heroines) + "'s " + base
     default: name = d.word(W.heroines) + ", " + d.word(W.epithets)
     }
+    // Sometimes a Legendary or Mythic piece is a relic from a famous book.
+    let options = relics.filter { $0.slot == slot.id }
+    if !options.isEmpty && d.chance(relicChance(r)) {
+      let relic = d.pick(options)
+      name = relic.name
+      item.flavour = relic.flavour
+      item.after = relic.author
+      item.power = relic.power
+    }
     item.name = name
     item.text = name
     let baseNote = r >= Rarity.epic ? " (\(base))" : ""

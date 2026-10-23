@@ -26,6 +26,12 @@ enum Snapshots {
       if let uid = e.st.gear.stash.first?.uid { e.equip(uid) }
     }
     for _ in 0..<9 { e.grant(Gear.make(d, Rarity.roll(d, 1, 7, luck: 50), ilvl: 12)) }
+    // A relic or two, so the snapshots show one.
+    var relic = Gear.make(Dice(7), Rarity.mythic, ilvl: 12, slot: "charm")
+    let tell = Gear.relics.first { $0.name == "The Tell-Tale Heart" }!
+    relic.name = tell.name; relic.text = tell.name; relic.flavour = tell.flavour; relic.after = tell.author; relic.power = tell.power
+    e.grant(relic)
+    if let uid = e.st.gear.stash.first?.uid { e.equip(uid) }
     for r in [4, 5, 6, 7] { e.grant(Looks.title(d, r)); e.grant(Looks.banner(d, r)) }
     e.st.profile.title = 2
     e.st.profile.banner = 3

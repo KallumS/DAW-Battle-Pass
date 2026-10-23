@@ -31,5 +31,6 @@ one that replaced it.
 | [0022](0022-closing-the-window-keeps-counting.md) | Closing the window keeps the clock running |
 | [0023](0023-clothes-and-kit-not-frills.md) | Clothes and kit, not frills |
 | [0024](0024-borrowed-from-miderator.md) | Packaging and Apple's guidelines, borrowed from Miderator |
+| [0025](0025-relics-from-famous-books.md) | Relics from famous books |
 
 [`../ARCHITECTURE.md`](../ARCHITECTURE.md) groups them by subject, on one page.

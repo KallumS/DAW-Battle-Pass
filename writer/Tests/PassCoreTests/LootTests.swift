@@ -99,14 +99,53 @@ final class LootTests: XCTestCase {
         switch r {
         case Rarity.poor: XCTAssertTrue(Gear.junk.contains { g.name.hasPrefix($0 + " ") }, g.name)
         case Rarity.common: XCTAssertEqual(g.name, g.base)
-        case Rarity.legendary: XCTAssertTrue(g.name.contains("'s "), g.name)
-        case Rarity.mythic: XCTAssertTrue(g.name.contains(", "), g.name)
+        case Rarity.legendary where g.flavour == nil: XCTAssertTrue(g.name.contains("'s "), g.name)
+        case Rarity.mythic where g.flavour == nil: XCTAssertTrue(g.name.contains(", "), g.name)
         default: break
         }
         for (id, v) in Gear.stats(g) { XCTAssertFalse(Gear.statLine(id, v).contains("%d"), id) }
       }
     }
     XCTAssertGreaterThan(Gear.score(Gear.make(Dice(1), 7, ilvl: 50)), Gear.score(Gear.make(Dice(1), 2, ilvl: 50)))
+  }
+
+  /// Relics from famous books (0025): every slot has some, only Legendary
+  /// and Mythic pieces become them, and their powers are real powers.
+  func testRelics() {
+    for s in Gear.slots {
+      XCTAssertGreaterThanOrEqual(Gear.relics.filter { $0.slot == s.id }.count, 2, "\(s.id) has relics")
+    }
+    XCTAssertEqual(Set(Gear.relics.map(\.name)).count, Gear.relics.count, "no relic twice")
+    for relic in Gear.relics {
+      XCTAssertNotNil(Gear.slot(relic.slot), relic.name)
+      XCTAssertNotNil(Gear.power(relic.power), relic.name)
+      XCTAssertLessThan(relic.flavour.count, 80, "\(relic.name): a line, not a paragraph")
+    }
+    XCTAssertTrue(Gear.relics.contains { $0.author == "Edgar Allan Poe" })
+    XCTAssertTrue(Gear.relics.contains { $0.author == "Stephen King" })
+    let d = Dice(17)
+    var found = [Int](repeating: 0, count: 8)
+    for r in 1...7 {
+      for _ in 0..<600 {
+        let g = Gear.make(d, r, ilvl: 20)
+        if let f = g.flavour {
+          found[r] += 1
+          let relic = Gear.relics.first { $0.name == g.name }
+          XCTAssertNotNil(relic, g.name)
+          XCTAssertEqual(relic?.flavour, f)
+          XCTAssertEqual(relic?.slot, g.slot)
+          XCTAssertEqual(g.power, relic?.power)
+        }
+      }
+    }
+    XCTAssertEqual(found[1...5].reduce(0, +), 0, "only Legendary and Mythic pieces are relics")
+    XCTAssertTrue((180...300).contains(found[6]), "about 40% of Legendaries (\(found[6]))")
+    XCTAssertTrue((300...420).contains(found[7]), "about 60% of Mythics (\(found[7]))")
+    let r = Rig()
+    var relic = Gear.make(Dice(3), Rarity.mythic, ilvl: 5)
+    relic.flavour = "x"
+    r.g.grant(relic)
+    XCTAssertEqual(r.g.st.stats.relics, 1, "relics found are counted, for the trophy")
   }
 
   func testCratesAndTiers() {
@@ -157,6 +196,7 @@ final class LootTests: XCTestCase {
     words += Gear.slots.flatMap { [$0.name] + $0.bases }
     words += W.titleRoles + W.titleAdjs + W.epithets + W.bannerThings + W.colourWords + W.seasonAdj
     words += Achievements.all.map(\.title) + Gear.epicA + Gear.epicB
+    words += Gear.relics.flatMap { [$0.name, $0.flavour] }
     for w in words { for f in frills { XCTAssertFalse(w.lowercased().contains(f), "\(w) is frilly") } }
   }
 
@@ -184,6 +224,8 @@ final class LootTests: XCTestCase {
       let stats = Gear.stats(g).map { Gear.statLine($0.key, $0.value) }.sorted().joined(separator: "; ")
       out.append("  [\(Rarity.name(r))] \(g.name) (\(g.sub)) \(stats)\(g.power.map { "  POWER: " + (Gear.power($0)?.text ?? $0) } ?? "")")
     }
+    out.append("-- Relics")
+    for relic in Gear.relics { out.append("  [\(relic.slot)] \(relic.name) - \(relic.flavour) (\(relic.author); \(Gear.power(relic.power)?.name ?? relic.power))") }
     out.append("-- Titles and banners")
     for r in 1...7 { out.append("  [\(Rarity.name(r))] \(Looks.title(d, r).text)  /  \(Looks.banner(d, r).text)") }
     out.append("-- Seasons: " + (10...15).map { Loot.seasonName($0) }.joined(separator: ", "))

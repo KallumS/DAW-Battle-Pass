@@ -10,7 +10,8 @@ thousand words is roughly a level early on), and every level brings a **gift
 box**. Gifts are coins, writing prompts (characters, first lines, plot
 twists, book titles...), titles, banners - and a **wardrobe** of clothes,
 hats, headphones, trainers and pens, each with stats that make you earn
-faster. Coins buy **treats** in the shop: permission slips for a fancy
+faster - and the rarest are relics from famous books: The Raven's Quill,
+the Overlook caretaker's jacket, the Tell-Tale Heart, Room 237's key. Coins buy **treats** in the shop: permission slips for a fancy
 coffee, a game night, gig tickets, a new top, new trainers, a makeup
 restock, a new jacket, a shopping spree. Buy one, then redeem it when you
 take the treat. You can rename, reprice, add and remove treats in Settings.

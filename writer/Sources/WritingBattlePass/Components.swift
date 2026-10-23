@@ -216,6 +216,13 @@ struct DropCard: View {
         Text(drop.sub).font(drop.type == "idea" ? Theme.serif(12).italic() : Theme.ui(11.5))
           .foregroundStyle(Theme.dim).fixedSize(horizontal: false, vertical: true).lineLimit(6)
       }
+      if let f = drop.flavour, !compact {
+        VStack(alignment: .leading, spacing: 2) {
+          Text("\u{201C}\(f)\u{201D}").font(Theme.serif(12.5).italic()).foregroundStyle(Theme.text)
+            .fixedSize(horizontal: false, vertical: true)
+          if let a = drop.after { Text("A relic from the books of " + a).font(Theme.ui(10.5, .semibold)).foregroundStyle(col) }
+        }
+      }
       if drop.type == "gear" && !compact { GearLines(item: drop) }
     }
     .padding(12)

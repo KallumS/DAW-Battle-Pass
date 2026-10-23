@@ -207,7 +207,13 @@ enum W {
     "Describe a room so we know exactly who lives there",
     "Delete your favourite sentence and write a better one", "Use a word you have never used before",
     "Write the ending first", "Give every character a secret", "Open in the middle of an argument",
-    "Write from the point of view of an object", "No word may be longer than two syllables"]
+    "Write from the point of view of an object", "No word may be longer than two syllables",
+    "Give it a narrator who swears they're perfectly sane (very Poe)",
+    "Set it in a small town hiding something rotten (very Stephen King)",
+    "Make the house itself the villain (very Shirley Jackson)",
+    "Gather every suspect in one room for the reveal (very Agatha Christie)",
+    "Tell it through letters and diary entries (very Bram Stoker)",
+    "Open with a sentence everyone will quote (very Jane Austen)"]
 
   static let poemTopics = ["the first coffee of the day", "a lost earring", "the sea in winter",
     "an old flame", "Sunday mornings", "your favourite jacket", "a city at night",
@@ -234,7 +240,8 @@ enum W {
     "Dark Academia", "Domestic Noir", "Magical Realism", "Western", "Cyberpunk", "Epistolary",
     "Heist", "Psychological Thriller", "Southern Gothic", "Paranormal Romance", "Comedy of Manners",
     "Folk Horror", "Spy Thriller", "Coming of Age", "Murder Mystery", "Time-Travel Romance",
-    "Dystopia", "Satire", "Fable", "Beach Read", "Ghost Story", "Fantasy Romance"]
+    "Dystopia", "Satire", "Fable", "Beach Read", "Ghost Story", "Fantasy Romance", "Small-Town Horror",
+    "Cosmic Horror", "Victorian Detective Story"]
 
   static let povs = ["first person", "close third person", "second person", "omniscient narrator",
     "letters and diary entries", "two alternating narrators"]
@@ -298,7 +305,8 @@ enum W {
     "Paragraph Punk", "Cliffhanger Captain"]
   static let titleOf = ["the Last Chapter", "the Blank Page", "the Plot Hole", "the Second Draft",
     "Purple Prose", "Many Notebooks", "the Final Edit", "the Midnight Oil", "the Happy Ending",
-    "the Cliffhanger", "the Oxford Comma", "the Red Pen"]
+    "the Cliffhanger", "the Oxford Comma", "the Red Pen", "the House of Usher", "Castle Rock",
+    "Hill House", "Baker Street", "the Overlook"]
 
   static let colourWords = ["Rust", "Midnight", "Forest", "Velvet", "Steel", "Storm", "Emerald",
     "Ruby", "Pearl", "Coral", "Sapphire", "Amber", "Plum", "Sunset", "Ivory", "Golden"]

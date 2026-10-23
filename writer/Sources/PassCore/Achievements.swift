@@ -55,6 +55,8 @@ public enum Achievements {
                 goals: [1, 10, 50, 200]) { $0.stats.ideasUsed },
     Achievement(id: "legend", name: "Legendary Luck", fmt: "Find %@ Legendary or better things", title: "Touched by Fortune",
                 goals: [1, 10, 50, 200]) { $0.stats.legendaries },
+    Achievement(id: "relics", name: "Literary Relics", fmt: "Find %@ relics from famous books", title: "Keeper of Relics",
+                goals: [1, 5, 15, 40]) { $0.stats.relics },
     Achievement(id: "mythic", name: "Myth Maker", fmt: "Find %@ Mythic things", title: "The Mythic",
                 goals: [1, 5, 25]) { $0.stats.mythics },
     Achievement(id: "gear", name: "Kitted Out", fmt: "Reach a style score of %@", title: "Style Icon",

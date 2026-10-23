@@ -136,3 +136,4 @@ musical ideas, and treats she edits herself. Its own guide is
 | [0022](decisions/0022-closing-the-window-keeps-counting.md) | Closing the window keeps the clock running in the menu bar. |
 | [0023](decisions/0023-clothes-and-kit-not-frills.md) | She's a bit of a tomboy: gig tickets and jackets, not lipstick and dresses; tested. |
 | [0024](decisions/0024-borrowed-from-miderator.md) | From Miderator: a .dmg with "Read me first", text at 7:1, Reduce Motion respected. |
+| [0025](decisions/0025-relics-from-famous-books.md) | Some Legendary and Mythic pieces are relics from Poe, Stephen King and other writers' books. |

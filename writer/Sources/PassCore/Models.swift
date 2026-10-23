@@ -46,6 +46,8 @@ public struct Drop: Codable, Equatable {
   public var affixes: [Stat]? = nil
   public var power: String? = nil
   public var banner: BannerData? = nil
+  public var flavour: String? = nil     // a relic's line (0025)
+  public var after: String? = nil       // whose book a relic comes from
 }
 
 public struct Profile: Codable, Equatable {
@@ -66,7 +68,7 @@ public struct Stats: Codable, Equatable {
   public var crates = 0.0, dailies = 0.0, weeklies = 0.0, tiers = 0.0, seasonsDone = 0.0
   public var coinsEarned = 0.0, coinsSpent = 0.0, purchases = 0.0, redeemed = 0.0
   public var ideas = 0.0, ideasUsed = 0.0, legendaries = 0.0, mythics = 0.0, boosts = 0.0
-  public var night = 0.0, dawn = 0.0, weekend = 0.0, xpTotal = 0.0
+  public var night = 0.0, dawn = 0.0, weekend = 0.0, xpTotal = 0.0, relics = 0.0
 }
 
 public struct Quest: Codable, Equatable {
