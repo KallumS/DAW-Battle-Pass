@@ -24,13 +24,5 @@ one that replaced it.
 | [0015](0015-sure-before-spending.md) | Anything that spends or destroys asks once more |
 | [0016](0016-mocks-from-the-docs-and-tests-that-bite.md) | Tested against mocks written from the documentation, and proven to bite |
 | [0017](0017-released-through-reapack-pinned.md) | Released through ReaPack, pinned to commits |
-| [0018](0018-the-writer-is-a-native-mac-app.md) | Writing Battle Pass is a native Swift Mac app, built by CI |
-| [0019](0019-typing-is-counted-never-recorded.md) | Typing is counted, never recorded |
-| [0020](0020-letters-are-a-top-up.md) | A letter is a tenth of an XP, capped a minute |
-| [0021](0021-her-treats-are-hers-to-edit.md) | The treats are editable in the app |
-| [0022](0022-closing-the-window-keeps-counting.md) | Closing the window keeps the clock running |
-| [0023](0023-clothes-and-kit-not-frills.md) | Clothes and kit, not frills |
-| [0024](0024-borrowed-from-miderator.md) | Packaging and Apple's guidelines, borrowed from Miderator |
-| [0025](0025-relics-from-famous-books.md) | Relics from famous books |
 
 [`../ARCHITECTURE.md`](../ARCHITECTURE.md) groups them by subject, on one page.
