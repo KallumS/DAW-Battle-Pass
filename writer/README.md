@@ -46,9 +46,10 @@ for the new version (the Mac sees it as a new app).
 ## Which apps count
 
 Out of the box: Word, Pages, Scrivener, Ulysses, iA Writer, Bear, Notes,
-TextEdit, Obsidian, Typora and Reedsy. In **Settings → Writing apps** you can
+TextEdit, Obsidian, Typora and Reedsy - and LivingWriter's Mac app, which
+switches itself on the first time you use it (a note pops up to say so). In **Settings → Writing apps** you can
 switch on any other app you've typed in (it appears there once you have).
-Writing in **Google Docs**? Switch on your web browser - but then browsing
+Writing in **Google Docs** or LivingWriter in a browser? Switch on your web browser - but then browsing
 counts too. There's also a switch to count every app.
 
 ## Your progress

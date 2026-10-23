@@ -32,6 +32,17 @@ public enum Rules {
     "com.google.Chrome.app.docs", "abnerworks.Typora", "com.reedsy.studio",
   ]
 
+  /// Writing apps known by name, for when their bundle id isn't known
+  /// (LivingWriter's Mac app). The first time one comes to the front it is
+  /// switched on, unless she has switched it off before.
+  public static let writingAppNames = ["livingwriter", "scrivener", "ulysses", "ia writer", "bear", "obsidian",
+                                       "typora", "reedsy", "novelpad", "dabble", "plottr", "manuskript", "storyist"]
+
+  public static func looksLikeWritingApp(_ name: String) -> Bool {
+    let n = name.lowercased().replacingOccurrences(of: " ", with: "")
+    return writingAppNames.contains { n.contains($0.replacingOccurrences(of: " ", with: "")) }
+  }
+
   // The shop ------------------------------------------------------------------
   //
   // Prices in coins. A focused hour earns roughly 600 coins all told (the Economy test), so a

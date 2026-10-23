@@ -68,7 +68,7 @@ struct SettingsPage: View {
               .disabled(st.settings.everywhere)
             }
           }
-          Text("Writing in Google Docs? Turn on your web browser - but then all your browsing counts too.")
+          Text("LivingWriter and other writing apps switch on by themselves the first time you use them. Writing in a web browser (Google Docs, LivingWriter online)? Turn the browser on - but then all your browsing counts too.")
             .font(Theme.ui(11.5)).foregroundStyle(Theme.dim)
           if let f = model.front { Text("In front right now: \(f.name)").font(Theme.ui(11.5)).foregroundStyle(Theme.dim) }
         }

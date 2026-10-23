@@ -122,6 +122,12 @@ final class Model: ObservableObject {
     let keys = KeyTap.take()
     fx.calm = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     front = Watch.front()
+    if let f = front, f.id != Watch.me, Rules.looksLikeWritingApp(f.name),
+       !engine.st.settings.apps.contains(f.id), !engine.st.settings.declined.contains(f.id) {
+      engine.st.settings.apps.append(f.id)
+      dirty = true
+      toast("\(f.name) counts now", "Your writing there earns time and XP", "pencil", 3)
+    }
     let s = engine.st.settings
     counting = front.map { $0.id != Watch.me && (s.everywhere || s.apps.contains($0.id)) } ?? false
     if let f = front, f.id != Watch.me, keys.letters > 0 {
@@ -323,7 +329,8 @@ final class Model: ObservableObject {
   func toggleApp(_ id: String, _ on: Bool) {
     act { e in
       e.st.settings.apps.removeAll { $0 == id }
-      if on { e.st.settings.apps.append(id) }
+      e.st.settings.declined.removeAll { $0 == id }
+      if on { e.st.settings.apps.append(id) } else { e.st.settings.declined.append(id) }
     }
   }
 

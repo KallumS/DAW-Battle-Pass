@@ -200,6 +200,14 @@ final class LootTests: XCTestCase {
     for w in words { for f in frills { XCTAssertFalse(w.lowercased().contains(f), "\(w) is frilly") } }
   }
 
+  func testWritingAppsKnownByName() {
+    XCTAssertTrue(Rules.looksLikeWritingApp("LivingWriter"))
+    XCTAssertTrue(Rules.looksLikeWritingApp("Living Writer"))
+    XCTAssertTrue(Rules.looksLikeWritingApp("Scrivener 3"))
+    XCTAssertFalse(Rules.looksLikeWritingApp("Safari"))
+    XCTAssertFalse(Rules.looksLikeWritingApp("Messages"))
+  }
+
   func testShopIsSane() {
     let ids = (Rules.defaultRewards + Rules.fixedShop).map(\.id)
     XCTAssertEqual(Set(ids).count, ids.count, "every shop id is different")

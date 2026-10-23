@@ -173,6 +173,7 @@ public struct Settings: Codable, Equatable {
   public var sound = true
   public var everywhere = false              // count typing in every app
   public var apps: [String] = Rules.writingApps
+  public var declined: [String] = []           // apps she switched off: never switched on by name again
   public var seen: [String: SeenApp] = [:]
 }
 
