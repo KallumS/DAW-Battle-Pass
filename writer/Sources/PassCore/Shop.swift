@@ -215,6 +215,45 @@ extension Engine {
     return true
   }
 
+  // Titles and banners: binned for nothing, to keep the lists tidy -------------
+
+  /// Bins one title. If it was being worn, nothing is worn now.
+  @discardableResult
+  public func binTitle(_ i: Int) -> Bool {
+    guard st.cos.titles.indices.contains(i) else { return false }
+    st.cos.titles.remove(at: i)
+    st.profile.title = Engine.afterRemoving(i, from: st.profile.title)
+    return true
+  }
+
+  @discardableResult
+  public func binBanner(_ i: Int) -> Bool {
+    guard st.cos.banners.indices.contains(i) else { return false }
+    st.cos.banners.remove(at: i)
+    st.profile.banner = Engine.afterRemoving(i, from: st.profile.banner)
+    return true
+  }
+
+  /// Bins every title and banner at or under a rarity, except the ones she's
+  /// wearing. Returns how many went.
+  @discardableResult
+  public func binCosmeticsUpTo(_ maxRarity: Int) -> Int {
+    var n = 0
+    for i in st.cos.titles.indices.reversed() where st.cos.titles[i].rarity <= maxRarity && i != st.profile.title {
+      binTitle(i); n += 1
+    }
+    for i in st.cos.banners.indices.reversed() where st.cos.banners[i].rarity <= maxRarity && i != st.profile.banner {
+      binBanner(i); n += 1
+    }
+    return n
+  }
+
+  /// What a worn index becomes when item `i` leaves its list.
+  static func afterRemoving(_ i: Int, from worn: Int) -> Int {
+    if worn == i { return -1 }
+    return worn > i ? worn - 1 : worn
+  }
+
   public func toggleFav(_ uid: Int) {
     guard let i = findIdea(uid) else { return }
     st.vault[i].fav = !(st.vault[i].fav ?? false)

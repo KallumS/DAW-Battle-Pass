@@ -97,12 +97,15 @@ struct TrophiesPage: View {
       HStack(alignment: .top, spacing: 16) {
         Panel {
           VStack(alignment: .leading, spacing: 10) {
-            SectionTitle(text: "Your title", right: "\(st.cos.titles.count) earned")
+            HStack {
+              SectionTitle(text: "Your title", right: "\(st.cos.titles.count) earned")
+            }
             if st.cos.titles.isEmpty { Text("Titles drop from the pass and finishing a series of trophies.").font(Theme.ui(12.5)).foregroundStyle(Theme.dim) }
             FlowLayoutCompat(items: Array(st.cos.titles.enumerated()).map { ($0.offset, $0.element) }) { i, t in
               Button(t.text) { model.act { $0.st.profile.title = ($0.st.profile.title == i ? -1 : i) } }
                 .buttonStyle(Pill(on: st.profile.title == i, colour: st.profile.title == i ? nil : Theme.control))
                 .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.rarity(t.rarity), lineWidth: 1.5))
+                .contextMenu { Button("Bin this title") { model.act { $0.binTitle(i) } } }
             }
           }
         }
@@ -117,11 +120,17 @@ struct TrophiesPage: View {
                     .background(RoundedRectangle(cornerRadius: 10).strokeBorder(st.profile.banner == i ? Theme.accent : Color.clear, lineWidth: 2))
                 }
                 .buttonStyle(.plain).help(b.text)
+                .contextMenu { Button("Bin this banner") { model.act { $0.binBanner(i) } } }
               }
             }
           }
         }
         .frame(width: 330)
+      }
+      HStack(spacing: 10) {
+        Text("Right-click a title or banner to bin it.").font(Theme.ui(11.5)).foregroundStyle(Theme.dim)
+        Spacer()
+        SureButton(label: "Bin all Poor and Common titles and banners") { model.act { $0.binCosmeticsUpTo(Rarity.common) } }
       }
       SectionTitle(text: "Trophies", right: "\(totals.have) of \(totals.all)")
       LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 10)], spacing: 10) {

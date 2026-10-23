@@ -338,6 +338,33 @@ final class GearTests: XCTestCase {
   }
 }
 
+final class CosmeticTests: XCTestCase {
+  func testBinningTitlesAndBanners() {
+    let r = Rig()
+    for (i, rr) in [2, 5, 1, 6].enumerated() {
+      r.g.grant(Drop(type: "title", rarity: rr, name: "Title", icon: "crown", text: "T\(i)"))
+    }
+    r.g.st.profile.title = 3                        // wearing T3
+    XCTAssertTrue(r.g.binTitle(1))                  // T1 goes
+    XCTAssertEqual(r.g.st.cos.titles.map(\.text), ["T0", "T2", "T3"])
+    XCTAssertEqual(r.g.activeTitle(), "T3", "still wearing the same title")
+    XCTAssertTrue(r.g.binTitle(2))                  // the worn one
+    XCTAssertEqual(r.g.st.profile.title, -1, "binning the worn title wears none")
+    XCTAssertFalse(r.g.binTitle(9))
+    let coins = r.g.st.coins
+    for rr in [1, 2, 4] { r.g.grant(Looks.banner(Dice(rr), rr)) }
+    r.g.st.profile.banner = 0                       // wearing a Poor banner
+    r.g.st.profile.title = 1                        // wearing T2 (Poor)
+    let n = r.g.binCosmeticsUpTo(Rarity.common)
+    XCTAssertEqual(n, 2, "T0 and the Common banner; the worn ones stay")
+    XCTAssertEqual(r.g.st.cos.titles.map(\.text), ["T2"])
+    XCTAssertEqual(r.g.st.profile.title, 0)
+    XCTAssertEqual(r.g.st.cos.banners.map(\.rarity), [1, 4])
+    XCTAssertEqual(r.g.st.profile.banner, 0)
+    XCTAssertEqual(r.g.st.coins, coins, "binned for nothing")
+  }
+}
+
 final class CrateTests: XCTestCase {
   func testOpening() {
     let r = Rig()
