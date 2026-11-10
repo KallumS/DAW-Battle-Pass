@@ -14,6 +14,8 @@ you open.
 Built in the same shape and colours as Good Idea, Midi Catalogue, Starting
 Blocks and ScaleView.
 
+**In Ableton Live:** `ableton/` has DAW Battle Pass as a Max for Live MIDI effect. See [`ableton/README.md`](ableton/README.md).
+
 ## Installing
 
 You need **ReaImGui**, the extension your other scripts already use. If you

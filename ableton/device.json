@@ -1,0 +1,16 @@
+{
+  "name": "DAW Battle Pass",
+  "slug": "DAWBattlePass",
+  "kind": "midi",
+  "template": "midi_effect",
+  "width": 900,
+  "description": "A battle pass that rewards you for making music: tiers for time spent, XP for what you do, quests, crates.",
+  "device": {},
+  "files": {
+    "battle-pass/bp_theory.lua": "../reascripts/bp_theory.lua",
+    "battle-pass/bp_loot.lua": "../reascripts/bp_loot.lua",
+    "battle-pass/bp_game.lua": "../reascripts/bp_game.lua"
+  },
+  "scripts": ["kit/runtime/polyfill.js", "kit/runtime/lua_parse.js", "kit/runtime/lua_runtime.js", "kit/runtime/lua_compile.js",
+              "kit/runtime/host.js", "kit/ui.js", "kit/live.js", "battlepass.js"]
+}
