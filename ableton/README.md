@@ -34,7 +34,7 @@ The game is the musician's, not the set's: it is saved in `DAW Battle Pass save.
 ableton/device.json` writes the `.amxd`, the `.maxpat` and the script bundle
 `DAWBattlePass.js`. The bundle is Middaw's Lua 5.4 runtime, the three game files, Middaw's host (its `passStart`, `passCall`, `passGet` and `passNotices`, as Middaw's own Battle Pass window uses them), and `ableton/battlepass.js`: the panel, and the watch on the Live set. See `ableton/kit/VENDORED.md`.
 
-`node --test ableton/tests/test_device.js` runs the device on a pretend Max and Live: the game starts and shows its quests, time playing fills the tier, a new track, clip and device become events, Check In pays once, a finished quest is claimed and a level's crate opened, and the game is kept in a file and comes back in another set.
+`node --test ableton/tests/test_device.js` runs the device on a pretend Max and Live: the game starts and shows its quests, time playing fills the tier, a new track, clip and device become events, Check In pays once, a finished quest is claimed and a level's crate opened, and the game is kept in a file and comes back in another set. `node ableton/window.js` redraws the picture above from the device's own drawing code (it needs Playwright's Chromium).
 
 ## Limits
 

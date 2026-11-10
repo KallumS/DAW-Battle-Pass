@@ -16,6 +16,8 @@ Blocks and ScaleView.
 
 **In Ableton Live:** `ableton/` has DAW Battle Pass as a Max for Live MIDI effect. See [`ableton/README.md`](ableton/README.md).
 
+![DAW Battle Pass in Ableton Live](ableton/window.png)
+
 ## Installing
 
 You need **ReaImGui**, the extension your other scripts already use. If you
