@@ -5,6 +5,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const path = require('node:path');
 const { load, liveSet } = require('../kit/test/max.js');
+require('../kit/test/palette_suite.js')();
 
 const BUNDLE = path.join(__dirname, '..', 'DAWBattlePass.js');
 function device(opts) {

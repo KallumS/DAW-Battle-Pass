@@ -11,6 +11,6 @@
     "battle-pass/bp_loot.lua": "../reascripts/bp_loot.lua",
     "battle-pass/bp_game.lua": "../reascripts/bp_game.lua"
   },
-  "scripts": ["kit/runtime/polyfill.js", "kit/runtime/lua_parse.js", "kit/runtime/lua_runtime.js", "kit/runtime/lua_compile.js",
+  "scripts": ["kit/palette.js", "kit/runtime/polyfill.js", "kit/runtime/lua_parse.js", "kit/runtime/lua_runtime.js", "kit/runtime/lua_compile.js",
               "kit/runtime/host.js", "kit/ui.js", "kit/live.js", "battlepass.js"]
 }

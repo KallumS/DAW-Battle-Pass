@@ -2,6 +2,8 @@
 
 A Max for Live MIDI effect. The game is `reascripts/bp_game.lua`, `bp_loot.lua` and `bp_theory.lua`, the same files the REAPER script runs, unchanged; what it watches is the Live set.
 
+**Its colours are Live's**, after Ableton Live 8's default theme: neutral greys and one amber for what is on, so it sits beside Live's own devices. The REAPER version keeps the house scheme's yellow.
+
 ## Installing
 
 Needs **Live 12.1 or later with Max for Live** (Live Suite, or Standard with
